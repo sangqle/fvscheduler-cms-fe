@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
@@ -7,6 +8,8 @@ const nextConfig: NextConfig = {
     : process.env.NODE_ENV === 'production'
       ? 'standalone'
       : undefined,
+  // Thư mục cha có nhiều lockfile (các repo framevis khác); ghim root để Next không đoán sai.
+  outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },

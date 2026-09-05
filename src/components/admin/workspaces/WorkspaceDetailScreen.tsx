@@ -64,7 +64,7 @@ export function WorkspaceDetailScreen({ workspaceId }: { workspaceId: string }) 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Button variant="link" size="sm" className="w-fit px-0" asChild>
+        <Button variant="link" size="sm" className="self-start" asChild>
           <Link href="/workspaces">
             <ArrowLeft className="size-4" />
             Danh sách workspace
