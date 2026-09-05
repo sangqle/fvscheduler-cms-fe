@@ -1,20 +1,15 @@
 import type { Metadata } from 'next';
-import { PageHeader } from '@/components/admin/shared/PageHeader';
-import { ReadOnlyHint } from '@/components/admin/shared/ReadOnlyHint';
-import { PlanTable } from '@/components/admin/plans/PlanTable';
+import { Suspense } from 'react';
+import { PlanCatalogScreen } from '@/components/admin/plans/PlanCatalogScreen';
+import Loading from '../loading';
 
 export const metadata: Metadata = { title: 'Catalog gói' };
 
-/** CMS-07: catalog chỉ đọc, gồm cả gói đã ngừng bán (vẫn cấp tay được, mark-paid từ chối). */
+/** CMS-07: catalog quản lý được — gói (ADM-FLOW-08), nhóm & item (ADM-FLOW-10), từ vựng. */
 export default function PlansPage() {
   return (
-    <>
-      <PageHeader
-        title="Catalog gói"
-        description="Sắp theo mã · gồm cả gói đã ngừng bán (vẫn cấp được bằng tay, nhưng mark-paid sẽ từ chối)"
-        actions={<ReadOnlyHint>Chỉ đọc · thay đổi catalog đi qua migration / seed</ReadOnlyHint>}
-      />
-      <PlanTable />
-    </>
+    <Suspense fallback={<Loading />}>
+      <PlanCatalogScreen />
+    </Suspense>
   );
 }

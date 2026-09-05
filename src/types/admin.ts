@@ -158,7 +158,13 @@ export interface CancelSubscriptionInput {
   note: string;
 }
 
-// ─── Plans ────────────────────────────────────────────────────────────────────
+// ─── Plans (catalog) ─────────────────────────────────────────────────────────
+
+/** Số bản ghi ngoài catalog còn trỏ vào gói/item — quyết định gói có xóa vĩnh viễn được không. */
+export interface AdminPlanUsage {
+  subscriptions: number;
+  orders: number;
+}
 
 /** GET /api/admin/plans → AdminPlan[] */
 export interface AdminPlan {
@@ -172,6 +178,150 @@ export interface AdminPlan {
   yearlySalePrice: number | null;
   /** value null = không giới hạn; key vắng = gói không mang giới hạn này. */
   limits: Record<string, number | null>;
+  usage: AdminPlanUsage;
+  /** Gói trial cấu hình sẵn: không tắt bán và không xóa được (ADM-RULE-016). */
+  isTrialPlan: boolean;
+}
+
+/** Item trong gói đến từ nhóm (`GROUP`) hay từ một dòng ghi đè (`LINK`). */
+export type PlanItemSource = 'GROUP' | 'LINK';
+
+export interface AdminPlanGroupRef {
+  code: string;
+  label: string;
+  isActive: boolean;
+}
+
+export interface AdminPlanItemView {
+  code: string;
+  label: string;
+  groupCode: string;
+  featureKey: string | null;
+  enabled: boolean;
+  displayValue: string | null;
+  sortOrder: number;
+  source: PlanItemSource;
+}
+
+/** GET /api/admin/plans/{code} — cũng là response của POST / PUT / PUT composition. */
+export interface AdminPlanDetail extends AdminPlan {
+  groups: AdminPlanGroupRef[];
+  items: AdminPlanItemView[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Bốn cột giá, dùng chung cho create và update. */
+export interface PlanPriceInput {
+  monthlyListPrice: number | null;
+  monthlySalePrice: number | null;
+  /** Bắt buộc, `>= 0`. */
+  yearlyListPrice: number;
+  yearlySalePrice: number | null;
+}
+
+export interface CreatePlanInput extends PlanPriceInput {
+  /** `^[A-Z][A-Z0-9_]{1,31}$`, không đổi được sau khi tạo. */
+  code: string;
+  /** 1..120 ký tự. */
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+/** PUT /api/admin/plans/{code}: không có `code`, children không bị đụng tới. */
+export type UpdatePlanInput = Omit<CreatePlanInput, 'code'>;
+
+export interface PlanItemLinkInput {
+  code: string;
+  /** null = mặc định (true). */
+  enabled: boolean | null;
+  /** Tối đa 120 ký tự; null = theo mặc định của item. */
+  displayValue: string | null;
+  sortOrder: number | null;
+}
+
+export interface PlanLimitInput {
+  key: string;
+  /** null = không giới hạn; key vắng khỏi mảng = gói không mang giới hạn này. */
+  value: number | null;
+}
+
+/** PUT /api/admin/plans/{code}/composition: thay TOÀN BỘ children của gói. */
+export interface PlanCompositionInput {
+  groups: string[];
+  items: PlanItemLinkInput[];
+  limits: PlanLimitInput[];
+}
+
+// ─── Catalog: nhóm, item, từ vựng ────────────────────────────────────────────
+
+export interface AdminCatalogGroupItem {
+  code: string;
+  label: string;
+  featureKey: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+/** GET /api/admin/catalog/groups — nhóm chỉ đọc, không có CRUD nhóm ở backend. */
+export interface AdminCatalogGroup {
+  code: string;
+  label: string;
+  isActive: boolean;
+  sortOrder: number;
+  items: AdminCatalogGroupItem[];
+}
+
+export interface AdminCatalogItemUsage {
+  links: number;
+  overrides: number;
+}
+
+/** GET /api/admin/catalog/items — gồm cả item đã tắt, sắp theo sort nhóm rồi sort item. */
+export interface AdminCatalogItem {
+  code: string;
+  groupCode: string;
+  groupLabel: string;
+  label: string;
+  description: string | null;
+  featureKey: string | null;
+  badge: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  usage: AdminCatalogItemUsage;
+}
+
+export interface CreateItemInput {
+  /** `^[a-z][a-z0-9-]{1,63}$`, không đổi được sau khi tạo. */
+  code: string;
+  groupCode: string;
+  /** 1..160 ký tự. */
+  label: string;
+  /** Tối đa 400 ký tự. */
+  description: string | null;
+  /** null hoặc một khóa trong từ vựng đóng. */
+  featureKey: string | null;
+  /** Tối đa 40 ký tự. */
+  badge: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export type UpdateItemInput = Omit<CreateItemInput, 'code'>;
+
+/** GET /api/admin/catalog/feature-keys — từ vựng đóng + số item đang mang khóa lúc đọc. */
+export interface AdminFeatureKey {
+  key: string;
+  /** Khóa không gác route nào, chỉ nằm trong `FeatureCatalog.RESERVED_KEYS`. */
+  reserved: boolean;
+  activeCarriers: number;
+}
+
+/** GET /api/admin/catalog/limit-keys — từ vựng đóng của limits. */
+export interface AdminLimitKey {
+  key: string;
+  label: string;
 }
 
 // ─── Orders ───────────────────────────────────────────────────────────────────

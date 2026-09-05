@@ -28,7 +28,7 @@ src/app/(auth)/login, auth/callback/google   # đăng nhập (cùng flow ERP)
 src/app/(admin)/layout.tsx                    # gate: session + probe allowlist → /forbidden
 src/app/(admin)/workspaces, [workspaceId]     # CMS-01..04
 src/app/(admin)/orders                        # CMS-05/06 (?code= mở drawer, ?workspaceId= lọc)
-src/app/(admin)/plans                         # CMS-07
+src/app/(admin)/plans, [planCode]             # CMS-07 (?tab=plans|items|vocabulary)
 src/app/forbidden                             # 403 allowlist
 src/components/ui/                            # primitives (KHÔNG style tại feature)
 src/components/admin/{layout,shared,workspaces,orders,plans}/
@@ -69,10 +69,13 @@ docs/specs/                                   # spec ngắn mỗi module: màn h
 - Trạng thái gói **suy theo đồng hồ lúc đọc**: `NONE · TRIALING · ACTIVE · PAST_DUE · EXPIRED`.
   Lịch sử có thêm `status` lưu DB (`CANCELED`) vs `effectiveStatus`.
 - Nguồn: `TRIAL · SEPAY · MANUAL · LEGACY`. Cấp tay chỉ `MANUAL/LEGACY/TRIAL` (SEPAY bị 400).
-- 4 thao tác ghi duy nhất: **grant** (POST subscriptions, thay dòng live), **extend** (PATCH
+- Thao tác ghi trên workspace: **grant** (POST subscriptions, thay dòng live), **extend** (PATCH
   subscription), **cancel** (POST subscription/cancel), **mark-paid** (POST orders/{code}/mark-paid,
   nhận PENDING + EXPIRED, từ chối 409 nếu gói ngừng bán). Mọi thao tác ghi cần `note` 3..400 ký tự.
-- Không có: CRUD catalog, sửa override, audit log riêng, phân quyền theo role (chỉ allowlist).
+- Catalog ghi được: gói (tạo / sửa / bật tắt bán / xóa), thành phần gói (PUT composition thay TOÀN
+  BỘ nhóm + ghi đè item + limits), và item (tạo / sửa / bật tắt / xóa). Chi tiết ở `docs/specs/plans.md`.
+- Không có: CRUD nhóm item, thêm feature key / limit key mới, sửa override, audit log riêng, phân
+  quyền theo role (chỉ allowlist).
 - Mọi id là id mờ (`wk…`, `mb…`, `ac…`); dòng subscription không có id; đơn hàng theo `orderCode`.
 
 ## Workflow
