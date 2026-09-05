@@ -17,8 +17,9 @@ thêm primitive mới (copy từ `../framevis-erp/src/components/ui/` nếu ERP 
 |---|---|---|
 | Text/email/number/`datetime-local` | `Input` | `error?`, `leadingIcon?`, `leadingAddon?`; ngày giờ: bọc trong `components/admin/shared/DateTimeField` |
 | Nhiều dòng | `Textarea` | `error?`, `showCount?` + `maxLength`; ghi chú bắt buộc: `components/admin/shared/NoteField` |
-| Dropdown native (list ngắn) | `SelectNative` | dùng cho filter bar |
-| Dropdown Radix | `Select` (+ `SelectTrigger size`) | |
+| Dropdown lọc | `components/admin/shared/FilterSelect` (`FilterSelect` có "Tất cả", `ChoiceSelect` luôn có giá trị) | compose `Select`; nhãn mờ đứng trước giá trị, `className="w-auto"` để rộng theo nội dung |
+| Dropdown Radix trong form | `Select` (+ `SelectTrigger size`) | Radix **không nhận `value=""`**, dùng sentinel |
+| Dropdown native | `SelectNative` | chỉ khi thực sự cần `<select>` gốc; filter bar dùng `FilterSelect` |
 | Tìm được / list dài | `Combobox` | `options: {value,label,description?,keywords?}` |
 | Chọn 1 trong vài | `SegmentedControl` | `options`, `size="sm|md"`, `fullWidth` |
 | Ngày (không giờ) | `DatePicker` / `Calendar` | |
@@ -64,6 +65,7 @@ thêm primitive mới (copy từ `../framevis-erp/src/components/ui/` nếu ERP 
 | Toast | `useToast().showToast({ title, description, variant, duration })` |
 | Chip lọc | `FilterChip tone count` |
 | Chỉ đọc | `components/admin/shared/ReadOnlyHint` |
+| Hàng lọc | `flex flex-wrap items-center gap-2`: ô tìm `flex-1 basis-64`, dropdown `w-auto`, ghi chú `sm:ml-auto`. Sắp xếp đi vào `PageHeader actions`, không nằm trong hàng lọc |
 | Cặp nhãn/giá trị | `components/admin/shared/KeyValue` + `KeyValueList` |
 
 ## Thêm primitive

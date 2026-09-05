@@ -52,16 +52,23 @@ export function OrderListScreen() {
     <>
       <PageHeader title="Danh sách đơn hàng" description="Đối soát đơn tự thanh toán qua SePay · PENDING và EXPIRED là nhóm cần chú ý, PAID mờ đi" />
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
             leadingIcon={<Search className="size-4" />}
             placeholder="Mã đơn, tên workspace hoặc email chủ sở hữu"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="flex-1"
             aria-label="Tìm đơn hàng"
+            containerClassName="w-full min-w-52 flex-1 basis-64 sm:w-auto lg:max-w-96"
           />
-          <SegmentedControl options={STATUS_TABS} value={status} onValueChange={(v) => set({ status: v || undefined })} size="sm" className="shrink-0 overflow-x-auto no-scrollbar" />
+          <SegmentedControl
+            options={STATUS_TABS}
+            value={status}
+            onValueChange={(v) => set({ status: v || undefined })}
+            size="sm"
+            aria-label="Lọc theo trạng thái đơn"
+            className="max-w-full shrink-0 overflow-x-auto no-scrollbar"
+          />
         </div>
         {workspaceId && (
           <div className="flex flex-wrap items-center gap-2">

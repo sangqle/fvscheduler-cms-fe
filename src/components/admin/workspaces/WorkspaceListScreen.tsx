@@ -3,7 +3,12 @@
 import * as React from 'react';
 import { PageHeader } from '@/components/admin/shared/PageHeader';
 import { ErrorState } from '@/components/admin/shared/QueryState';
-import { WorkspaceFilters, hasActiveFilters, type WorkspaceFilterValues } from '@/components/admin/workspaces/WorkspaceFilters';
+import {
+  WorkspaceFilters,
+  WorkspaceSortControl,
+  hasActiveFilters,
+  type WorkspaceFilterValues,
+} from '@/components/admin/workspaces/WorkspaceFilters';
 import { WorkspaceTable } from '@/components/admin/workspaces/WorkspaceTable';
 import { useAdminWorkspaces } from '@/hooks/useAdminWorkspaces';
 import { toInt, useUrlState } from '@/hooks/useUrlState';
@@ -36,10 +41,10 @@ export function WorkspaceListScreen() {
             ? `${query.data.totalElements} workspace trên toàn nền tảng · trạng thái gói suy theo đồng hồ lúc đọc, không phải giá trị lưu DB`
             : 'Trạng thái gói suy theo đồng hồ lúc đọc, không phải giá trị lưu DB'
         }
+        actions={<WorkspaceSortControl value={values.sort} onChange={(sort) => set({ sort })} />}
       />
       <div className="flex flex-col gap-4">
         <WorkspaceFilters values={values} onChange={onChange} onClear={clear} />
-        <p className="text-xs text-muted-foreground">Không có thao tác ghi ở màn này · grant / extend / cancel nằm trong chi tiết</p>
         {query.error ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (

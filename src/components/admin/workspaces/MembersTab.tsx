@@ -4,15 +4,20 @@ import * as React from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
-import { SelectNative } from '@/components/ui/SelectNative';
 import { Text } from '@/components/ui/Text';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
+import { FilterSelect } from '@/components/admin/shared/FilterSelect';
 import { ErrorState } from '@/components/admin/shared/QueryState';
 import { ReadOnlyHint } from '@/components/admin/shared/ReadOnlyHint';
 import { useAdminMemberships } from '@/hooks/useAdminWorkspaces';
 import { MEMBERSHIP_STATUS } from '@/lib/admin/labels';
 import { formatDate, shortId } from '@/lib/utils';
 import type { AdminMembership, MembershipStatus } from '@/types/admin';
+
+const STATUS_OPTIONS = (Object.keys(MEMBERSHIP_STATUS) as MembershipStatus[]).map((s) => ({
+  value: s,
+  label: MEMBERSHIP_STATUS[s].label,
+}));
 
 function memberName(m: AdminMembership): string {
   return m.displayName || m.account?.displayName || 'Chưa đặt tên';
@@ -86,22 +91,16 @@ export function MembersTab({ workspaceId }: { workspaceId: string }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <SelectNative
-            size="sm"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as MembershipStatus | '');
+          <FilterSelect
+            label="Trạng thái"
+            value={status || undefined}
+            onChange={(v) => {
+              setStatus((v ?? '') as MembershipStatus | '');
               setPage(0);
             }}
-            aria-label="Trạng thái thành viên"
-          >
-            <option value="">Trạng thái: Tất cả</option>
-            {(Object.keys(MEMBERSHIP_STATUS) as MembershipStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {MEMBERSHIP_STATUS[s].label}
-              </option>
-            ))}
-          </SelectNative>
+            options={STATUS_OPTIONS}
+            className="w-auto"
+          />
           {query.data && (
             <Text variant="caption" muted>
               {query.data.totalElements} thành viên

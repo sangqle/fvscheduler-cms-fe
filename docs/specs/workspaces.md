@@ -11,6 +11,9 @@ thực hiện 3 thao tác ghi: cấp gói / trial, gia hạn, hủy gói. Thành
 
 ### `/workspaces` (CMS-01)
 - `WorkspaceListScreen` → `WorkspaceFilters` + `WorkspaceTable` (DataTable, phân trang server).
+- Hàng lọc một dòng (`flex-wrap`): ô tìm co giãn · `FilterSelect` Loại / Trạng thái gói / Gói (rộng
+  theo nội dung, dấu check bên phải theo convention `Select`) · nút Xóa bộ lọc khi đang lọc · ghi chú
+  "không có thao tác ghi" đẩy sát phải. Sắp xếp là `WorkspaceSortControl` trong `PageHeader actions`.
 - URL: `?q=&type=&subscriptionStatus=&planCode=&sort=createdAt,desc|name,asc&page=&size=15`
   (`useUrlState`; đổi filter reset `page`). Ô tìm debounce 300ms.
 - Cột: Workspace (tên, loại, id ngắn) · Chủ sở hữu (tên, email hoặc "Chưa có tài khoản đăng
@@ -27,7 +30,7 @@ thực hiện 3 thao tác ghi: cấp gói / trial, gia hạn, hủy gói. Thành
   status ≠ NONE); Quota (mỗi key trong `entitlement.limits ∪ unlimitedKeys`: usage/limit,
   `MeterBar`, cam khi chạm trần, ghi chú override); Ghi đè (limitOverrides, itemOverrides, chỉ
   đọc); Chủ sở hữu; Số liệu (booking, khách, TV, CN); Tính năng (`entitlement.features`).
-- **Thành viên** `MembersTab`: filter status, DataTable phân trang server, chỉ đọc.
+- **Thành viên** `MembersTab`: `FilterSelect` trạng thái + DataTable phân trang server, chỉ đọc.
 - **Lịch sử gói** `HistoryTab`: mảng phẳng; badge = `effectiveStatus`, dòng phụ "lưu DB: X";
   dòng CANCELED badge CANCELED + "hiệu lực: NONE", mờ đi; dòng live nền primary nhạt.
 
