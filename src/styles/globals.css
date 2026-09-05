@@ -1,0 +1,327 @@
+@import './tokens/index.css';
+@import 'tailwindcss';
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-50: hsl(var(--primary-50));
+  --color-primary-100: hsl(var(--primary-100));
+  --color-primary-200: hsl(var(--primary-200));
+  --color-primary-300: hsl(var(--primary-300));
+  --color-primary-400: hsl(var(--primary-400));
+  --color-primary-500: hsl(var(--primary-500));
+  --color-primary-600: hsl(var(--primary-600));
+  --color-primary-700: hsl(var(--primary-700));
+  --color-primary-800: hsl(var(--primary-800));
+  --color-primary-900: hsl(var(--primary-900));
+  --color-primary-950: hsl(var(--primary-950));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-soft: hsl(var(--destructive-soft));
+  --color-destructive-deep: hsl(var(--destructive-deep));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-warning-soft: hsl(var(--warning-soft));
+  --color-warning-deep: hsl(var(--warning-deep));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-success-soft: hsl(var(--success-soft));
+  --color-success-deep: hsl(var(--success-deep));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-info-soft: hsl(var(--info-soft));
+  --color-info-deep: hsl(var(--info-deep));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-divider: hsl(var(--divider));
+
+  /* Position chips */
+  --color-chip-main-soft: hsl(var(--chip-main-soft));
+  --color-chip-main-deep: hsl(var(--chip-main-deep));
+  --color-chip-blue-soft: hsl(var(--chip-blue-soft));
+  --color-chip-blue-deep: hsl(var(--chip-blue-deep));
+  --color-chip-pink-soft: hsl(var(--chip-pink-soft));
+  --color-chip-pink-deep: hsl(var(--chip-pink-deep));
+  --color-chip-owner-soft: hsl(var(--chip-owner-soft));
+  --color-chip-owner-deep: hsl(var(--chip-owner-deep));
+  --color-chip-amber-soft: hsl(var(--chip-amber-soft));
+  --color-chip-amber-deep: hsl(var(--chip-amber-deep));
+
+  /* Avatar hash palette */
+  --color-avatar-1: hsl(var(--avatar-1));
+  --color-avatar-2: hsl(var(--avatar-2));
+  --color-avatar-3: hsl(var(--avatar-3));
+  --color-avatar-4: hsl(var(--avatar-4));
+  --color-avatar-5: hsl(var(--avatar-5));
+  --color-avatar-6: hsl(var(--avatar-6));
+
+  /* Chart / data-viz palette */
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --color-chart-6: hsl(var(--chart-6));
+
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --shadow-primary: var(--shadow-primary);
+  --shadow-modal: var(--shadow-modal);
+
+  --font-family-sans: var(--font-sans);
+  --font-family-mono: var(--font-mono);
+  --font-family-serif: var(--font-serif);
+  --font-family-logo: var(--font-logo);
+
+  /* Landing (marketing) palette — see tokens/landing.css. Fixed, cream + magenta. */
+  --color-landing-bg: hsl(var(--landing-bg));
+  --color-landing-surface: hsl(var(--landing-surface));
+  --color-landing-surface-2: hsl(var(--landing-surface-2));
+  --color-landing-track: hsl(var(--landing-track));
+  --color-landing-dark: hsl(var(--landing-dark));
+  --color-landing-dark-card: hsl(var(--landing-dark-card));
+  --color-landing-dark-card-2: hsl(var(--landing-dark-card-2));
+  --color-landing-dark-border: hsl(var(--landing-dark-border));
+
+  --color-landing-ink: hsl(var(--landing-ink));
+  --color-landing-ink-2: hsl(var(--landing-ink-2));
+  --color-landing-muted: hsl(var(--landing-muted));
+  --color-landing-on-dark: hsl(var(--landing-on-dark));
+  --color-landing-on-dark-muted: hsl(var(--landing-on-dark-muted));
+
+  --color-landing-accent: hsl(var(--landing-accent));
+  --color-landing-accent-strong: hsl(var(--landing-accent-strong));
+  --color-landing-accent-soft: hsl(var(--landing-accent-soft));
+  --color-landing-accent-softer: hsl(var(--landing-accent-softer));
+  --color-landing-accent-border: hsl(var(--landing-accent-border));
+  --color-landing-accent-pink: hsl(var(--landing-accent-pink));
+
+  --color-landing-border: hsl(var(--landing-border));
+  --color-landing-border-soft: hsl(var(--landing-border-soft));
+
+  --color-landing-pending-soft: hsl(var(--landing-pending-soft));
+  --color-landing-pending-deep: hsl(var(--landing-pending-deep));
+  --color-landing-pending-dot: hsl(var(--landing-pending-dot));
+  --color-landing-confirmed-soft: hsl(var(--landing-confirmed-soft));
+  --color-landing-confirmed-deep: hsl(var(--landing-confirmed-deep));
+  --color-landing-confirmed-dot: hsl(var(--landing-confirmed-dot));
+  --color-landing-done-soft: hsl(var(--landing-done-soft));
+  --color-landing-done-deep: hsl(var(--landing-done-deep));
+  --color-landing-done-dot: hsl(var(--landing-done-dot));
+  --color-landing-cancelled-soft: hsl(var(--landing-cancelled-soft));
+  --color-landing-cancelled-deep: hsl(var(--landing-cancelled-deep));
+  --color-landing-cancelled-dot: hsl(var(--landing-cancelled-dot));
+  --color-landing-unassigned-soft: hsl(var(--landing-unassigned-soft));
+  --color-landing-unassigned-deep: hsl(var(--landing-unassigned-deep));
+  --color-landing-unassigned-border: hsl(var(--landing-unassigned-border));
+
+  --color-landing-sheets: hsl(var(--landing-sheets));
+}
+
+/* Display serif (Newsreader) for the brand wordmark — see --font-display in tokens/typography.css. */
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+/* Brand gradient (violet → magenta → pink) for CTAs / brand accents anywhere in the app. */
+@utility bg-gradient-primary {
+  background-image: var(--gradient-primary);
+}
+
+/* Hide the scrollbar while keeping scroll — used by overflow-x tab/segment bars on phones. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---- Landing (marketing) page decorations + motion ---- */
+
+/* Brand gradient washes (violet → magenta → pink) — see tokens/landing.css. */
+@utility bg-landing-gradient {
+  background-image: var(--landing-gradient);
+}
+@utility bg-landing-gradient-wash {
+  background-image: var(--landing-gradient-wash);
+}
+
+@keyframes fvfloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+@keyframes fvdash {
+  to { stroke-dashoffset: -22; }
+}
+@keyframes fvpulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+@keyframes fvspin {
+  to { transform: rotate(360deg); }
+}
+@keyframes fvring {
+  0%, 70%, 100% { transform: rotate(0); }
+  10%, 30%, 50% { transform: rotate(-11deg); }
+  20%, 40%, 60% { transform: rotate(11deg); }
+}
+
+@utility animate-fvfloat { animation: fvfloat 5s ease-in-out infinite; }
+@utility animate-fvdash  { animation: fvdash 1s linear infinite; }
+@utility animate-fvpulse { animation: fvpulse 2.4s ease-in-out infinite; }
+@utility animate-fvspin  { animation: fvspin 2.4s linear infinite; }
+@utility animate-fvring  {
+  transform-origin: top center;
+  animation: fvring 2.6s ease-in-out infinite;
+}
+
+/* Respect reduced-motion: kill all landing keyframe loops. */
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation: none !important;
+  }
+}
+
+/* One-shot reveal for content that swaps in after a loading state (e.g. DataTable rows
+   replacing their skeleton) — a skeleton→data swap with no transition reads as a jarring
+   "jump", so newly mounted rows fade in instead. Pair with `motion-reduce:animate-none`. */
+@keyframes fv-content-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@utility animate-content-in {
+  animation: fv-content-in 0.28s ease-out both;
+}
+
+/* ---- Overlay motion: SlideOver (Radix Dialog) ----------------------------------------------
+   Panel bên phải và lớp nền mờ của nó tự mang keyframe riêng thay vì dùng `animate-in` /
+   `slide-in-from-right`: hai lớp đó đến từ plugin `tailwindcss-animate`, mà **dự án không cài
+   plugin này** (Tailwind v4, `globals.css` chỉ `@import 'tailwindcss'`). Chúng biên dịch ra
+   rỗng, nên panel trước đây hiện ra tức thời, không trượt: đó mới là cái "giật" người dùng
+   thấy, không phải animation chạy chậm.
+
+   Chỉ động vào `transform` + `opacity` (không `left`/`width`) để browser chạy trên compositor,
+   không reflow từng frame. Vào chậm hơn ra: 0.32s giảm tốc kiểu tấm nghiêng iOS cho có sức nặng,
+   0.22s tăng tốc lúc đóng để bấm X không thấy phải chờ.
+
+   Radix `Presence` giữ node lại tới `animationend`, nên animation đóng chạy hết rồi mới unmount. */
+@keyframes fv-slideover-in {
+  from { transform: translate3d(100%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+@keyframes fv-slideover-out {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(100%, 0, 0); }
+}
+@keyframes fv-scrim-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* `prefers-reduced-motion` nằm **lồng trong** từng utility chứ không phải một khối `@media` riêng
+   ở cuối file: các lớp này luôn được dùng kèm biến thể (`data-[state=open]:animate-slideover-in`),
+   nên Tailwind chỉ sinh ra selector `.data-\[state\=open\]\:animate-slideover-in[data-state=open]`
+   — một rule `.animate-slideover-in` trần sẽ không bao giờ khớp phần tử nào. Lồng vào đây thì media
+   query đi theo đúng selector mà biến thể sinh ra.
+
+   Giảm chuyển động thì bỏ phần trượt, giữ lại fade ngắn — **không** đổi thành `animation: none`:
+   Radix `Presence` chờ `animationend` mới unmount, mất animation là panel đóng nằm lại trong DOM. */
+/* `backwards` cho lượt vào, `forwards` cho lượt ra — cố tình **không** dùng `both`, và cũng không
+   đặt `will-change: transform`. Cả hai thứ đó đều để lại một `transform` (hoặc một lời hứa sẽ có
+   transform) trên panel sau khi animation chạy xong, mà một phần tử có transform thì trở thành
+   containing block của mọi con `position: fixed`. Panel này có con như vậy thật: lớp bắt click ra
+   ngoài `fixed inset-0` của ô tìm album trong `BookingClientAlbumsSection` — bị co lại vừa bằng
+   panel thì bấm ra ngoài panel không đóng được dropdown nữa. `backwards` chỉ áp keyframe đầu trong
+   lúc chạy (đủ để không lóe một frame ở vị trí cuối) rồi trả phần tử về trạng thái gốc; `forwards`
+   giữ panel ở ngoài màn cho tới khi Radix gỡ khỏi DOM. Trình duyệt vẫn tự nâng phần tử lên
+   compositor trong lúc animate `transform`, nên bỏ `will-change` không làm mượt kém đi. */
+@utility animate-slideover-in {
+  animation: fv-slideover-in 0.32s cubic-bezier(0.32, 0.72, 0, 1) backwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation: fv-content-in 0.14s linear backwards;
+  }
+}
+@utility animate-slideover-out {
+  animation: fv-slideover-out 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation: fv-scrim-out 0.14s linear forwards;
+  }
+}
+@utility animate-scrim-in {
+  animation: fv-content-in 0.32s ease-out backwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 0.14s;
+  }
+}
+@utility animate-scrim-out {
+  animation: fv-scrim-out 0.2s ease-in forwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 0.14s;
+  }
+}
+
+/* Tắt ripple `:hover` khi cuộn — xem `src/hooks/useSuppressHoverOnScroll.ts`, hook gắn/gỡ lớp này.
+   Con trỏ đứng yên trong khi nội dung trượt bên dưới vẫn làm browser cập nhật `:hover` cho từng
+   phần tử đi qua nó; với một lưới chip dày (mỗi `Button` có `transition-colors`) thì hàng loạt fade
+   nền chồng nhau đọc ra là nhấp nháy. Chỉ khoá phần tử **con** — container giữ `pointer-events`
+   mặc định nên bánh xe và thanh cuộn không đổi hành vi.
+   Viết ngoài mọi `@layer` để thắng utility `pointer-events-*` của Tailwind (rule không nằm trong
+   cascade layer luôn thắng rule nằm trong layer) mà không phải dùng `!important`. */
+.is-scrolling * {
+  pointer-events: none;
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: var(--radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}

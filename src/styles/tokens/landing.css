@@ -1,0 +1,72 @@
+/*
+ * Landing (marketing) palette — FIXED, intentionally NOT reactive to `.dark`.
+ * Seeded from the "Landing Page Framevis v3" Claude Design mockup, then rebranded
+ * to the app's warm white + magenta system so the public page matches --primary.
+ * Nền trang dùng đúng `--background` của app (#f6f5f3). Bản seed là kem ngà đậm
+ * (#f4f1ea, sat 31%): landing vì thế đọc ra vàng hơn hẳn chính cái app nó quảng cáo.
+ * Hạ sat, nâng sáng, vẫn ấm nhưng là trắng ấm chứ không phải kem. `--landing-surface-2`
+ * và `--landing-border` hạ sat theo cùng nhịp để đừng vàng hơn nền chúng nằm trên.
+ * Consumed only inside the `.landing` scope. Keep everything token-driven (no
+ * hardcoded hex in JSX).
+ */
+:root {
+  /* Surfaces */
+  --landing-bg:             40 14% 96%;   /* #f6f5f3 nền trang, trắng ấm, cùng giá trị với --background của app */
+  --landing-surface:         0  0% 100%;  /* #ffffff cards / white sections */
+  --landing-surface-2:      40 12% 97%;   /* #f9f8f6 sub-panel / toolbar */
+  --landing-track:          40 12% 94%;   /* #f1f0ee rãnh thanh đo, đối ứng --muted của app */
+  --landing-dark:           44  8% 10%;   /* #1b1a17 dark sections + footer */
+  --landing-dark-card:      42 10% 14%;   /* #26241f card on dark */
+  --landing-dark-card-2:    43 10% 11%;   /* #1f1d19 nested card on dark */
+  --landing-dark-border:    42 10% 20%;   /* #37342d border on dark */
+
+  /* Ink / text */
+  --landing-ink:            44  8% 10%;    /* #1b1a17 primary text */
+  --landing-ink-2:          38  7% 32%;    /* #57534c secondary text */
+  --landing-muted:          39  6% 51%;    /* #8a857c muted / caption */
+  --landing-on-dark:        40 33% 96%;    /* #faf8f4 text on dark */
+  --landing-on-dark-muted:  40  8% 61%;    /* #a29d93 muted on dark */
+
+  /* Accent — magenta system (matches app brand --primary / magenta ramp in tokens/colors.css) */
+  --landing-accent:        292 68% 46%;    /* #B026C6 magenta · brand accent */
+  --landing-accent-strong: 291 69% 39%;    /* #921FA6 magenta-600 · text-on-tint */
+  --landing-accent-soft:   300 68% 95%;    /* #FBEAFB magenta-50 · tint bg / icon tile */
+  --landing-accent-softer: 300 69% 97%;    /* #FDF4FD very light magenta · painpoint "after" bg */
+  --landing-accent-border: 294 63% 82%;    /* #E8B4EE magenta-200 · tinted border */
+  --landing-accent-pink:   334 89% 64%;    /* #F5539A brand pink · light accent on dark */
+
+  /* Borders on light surfaces */
+  --landing-border:         40 14% 89%;    /* #e7e4df viền xám ấm */
+  --landing-border-soft:   240  9% 93%;    /* #ececef subtle white-section border */
+
+  /* Gradients — full values (mirror --gradient-primary): violet → magenta → pink #A24BFF → #E144E9 → #F5539A */
+  --landing-gradient:      linear-gradient(135deg, #A24BFF, #E144E9, #F5539A);
+  --landing-gradient-wash: linear-gradient(150deg, #A24BFF 0%, #E144E9 50%, #F5539A 100%);
+
+  /* Booking status — fixed light values (mirror the app's light-mode semantics) */
+  --landing-pending-soft:    38 80% 93%;  --landing-pending-deep:    37 79% 34%;  --landing-pending-dot:    35 74% 53%;
+  --landing-confirmed-soft: 203 75% 94%;  --landing-confirmed-deep: 202 70% 41%;  --landing-confirmed-dot: 204 60% 49%;
+  --landing-done-soft:      143 47% 93%;  --landing-done-deep:      146 60% 30%;  --landing-done-dot:      144 67% 37%;
+  --landing-cancelled-soft: 352 79% 96%;  --landing-cancelled-deep: 356 54% 41%;  --landing-cancelled-dot: 356 69% 60%;
+  --landing-unassigned-soft: 41 78% 96%;  --landing-unassigned-deep: 40 64% 37%;  --landing-unassigned-border: 44 54% 75%;
+
+  /* Third-party brand */
+  --landing-sheets:        151 82% 34%;    /* #0F9D58 Google Sheets green */
+
+  /* --font-serif is defined globally in tokens/typography.css (Newsreader). */
+
+  /* Decorative fake-photo swatch tones (photo picker) */
+  --landing-photo-1:  #cbbfb0;  --landing-photo-2:  #b8c3cc;  --landing-photo-3:  #d6c8ba;
+  --landing-photo-4:  #c0b4a7;  --landing-photo-5:  #aebbb1;  --landing-photo-6:  #ccbfcd;
+  --landing-photo-7:  #c5b1a4;  --landing-photo-8:  #b4bdc8;  --landing-photo-9:  #cbc0af;
+  --landing-photo-10: #bec8be;  --landing-photo-11: #d1c3ca;  --landing-photo-12: #bab1c2;
+}
+
+/* Root scope: fixed cream aesthetic, Be Vietnam Pro body font. */
+.landing {
+  background-color: hsl(var(--landing-bg));
+  color: hsl(var(--landing-ink));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

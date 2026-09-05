@@ -1,0 +1,183 @@
+/*
+ * Framevis color tokens — warm cream + magenta.
+ * Source of truth: Claude Design "Framevis - Bộ Token (Light + Dark)".
+ * Values are HSL "H S% L%" (converted from the DS hex) so they compose via hsl(var(--token)).
+ * NEVER hardcode hex/rgb/hsl in components — always go through a token. See docs/design-system.md.
+ */
+
+/* Light mode default. `.light` lặp lại cùng bộ giá trị để một subtree có thể tự ghim theme
+   sáng bất kể `<html>` đang `.dark` — dùng cho các bề mặt "tờ giấy" (phiếu A4 in/gửi khách)
+   phải trắng ở mọi theme. next-themes cũng gắn `.light` lên <html> ở light mode, trùng giá
+   trị nên vô hại. */
+:root,
+.light {
+  /* Brand — magenta / violet. --primary is the action color; --primary-600 is a darker shade for
+     hover & text-on-tint; 50/100 = subtle tints. Full 50→950 ramp (mid-steps shown only in /dev/ui);
+     primary === primary-500. */
+  --primary:                292 68% 46%;    /* #B026C6 · nút chính, link, active, ring */
+  --primary-foreground:     0 0% 100%;      /* #FFFFFF */
+  --primary-50:             300 68% 95%;    /* #FBEAFB · nền chip/nav active, icon tile */
+  --primary-100:            296 62% 90%;    /* #F3D4F5 · viền nhấn nhạt */
+  --primary-200:            294 63% 82%;    /* #E8B4EE */
+  --primary-300:            294 59% 72%;    /* #D98CE1 */
+  --primary-400:            294 58% 58%;    /* #C556D2 */
+  --primary-500:            292 68% 46%;    /* #B026C6 · = primary */
+  --primary-600:            291 69% 39%;    /* #921FA6 · hover đậm / chữ trên nền tint */
+  --primary-700:            291 68% 32%;    /* #7A1A8A */
+  --primary-800:            290 68% 27%;    /* #641673 */
+  --primary-900:            290 66% 22%;    /* #52135E */
+  --primary-950:            291 72% 14%;    /* #350A3D */
+
+  /* Neutral (warm ecru) — nền, thẻ, viền, chữ */
+  --background:             40 14% 96%;     /* #F6F5F3 */
+  --foreground:             45 8% 10%;      /* #1B1A17 */
+  --card:                   0 0% 100%;      /* #FFFFFF */
+  --card-foreground:        45 8% 10%;      /* #1B1A17 */
+  --popover:                0 0% 100%;      /* #FFFFFF */
+  --popover-foreground:     45 8% 10%;      /* #1B1A17 */
+  --secondary:              43 19% 93%;     /* #F0EEE9 — nút phụ, nền khối */
+  --secondary-foreground:   38 10% 21%;     /* #3A362F */
+  --muted:                  43 17% 94%;     /* #F2F1ED — nền mờ, hover hàng */
+  --muted-foreground:       40 6% 41%;      /* #6E6A62 — chữ phụ, caption */
+  --accent:                 43 20% 93%;     /* #F1EFEA — nền hover item */
+  --accent-foreground:      45 8% 10%;      /* #1B1A17 */
+  --border:                 43 14% 90%;     /* #E9E7E2 */
+  --input:                  43 14% 90%;     /* #E9E7E2 */
+  --divider:                43 19% 93%;     /* #F0EEE9 */
+  --ring:                   292 68% 46%;    /* #B026C6 — magenta */
+
+  /* Semantic — pending→warning · confirmed→info · done→success · cancelled→destructive */
+  --warning:                35 74% 53%;     /* #E0962E — chấm & viền */
+  --warning-foreground:     40 71% 13%;     /* #3A2A0A — chữ trên nền warning đặc */
+  --warning-soft:           33 83% 91%;     /* #FBE9D3 — nền pill */
+  --warning-deep:           36 77% 31%;     /* #8A5A12 — chữ pill */
+  --info:                   204 66% 49%;    /* #2B8FD0 */
+  --info-foreground:        0 0% 100%;      /* #FFFFFF */
+  --info-soft:              204 78% 93%;    /* #DFF0FB */
+  --info-deep:              199 75% 32%;    /* #14688F */
+  --success:                144 67% 37%;    /* #1F9D52 */
+  --success-foreground:     0 0% 100%;      /* #FFFFFF */
+  --success-soft:           146 47% 91%;    /* #DEF3E7 */
+  --success-deep:           146 63% 29%;    /* #1C7A45 */
+  --destructive:            357 63% 48%;    /* #C92E37 — nút nguy hiểm, chấm · Hủy */
+  --destructive-foreground: 0 0% 100%;      /* #FFFFFF */
+  --destructive-soft:       357 74% 94%;    /* #FBE4E5 */
+  --destructive-deep:       356 60% 47%;    /* #C0303A */
+
+  /* Position chips — mỗi vị trí một cặp nền(soft)+chữ(deep) cố định, dùng qua lib/positions.ts */
+  --chip-main-soft:         291 67% 94%;    /* #F7E6FA — Thợ chính */
+  --chip-main-deep:         291 69% 39%;    /* #921FA6 */
+  --chip-blue-soft:         219 59% 94%;    /* #E8EEF9 — Thợ phụ */
+  --chip-blue-deep:         223 51% 41%;    /* #33529E */
+  --chip-pink-soft:         326 78% 95%;    /* #FCE7F3 — Makeup */
+  --chip-pink-deep:         325 58% 42%;    /* #A82D74 */
+  --chip-owner-soft:        43 19% 93%;     /* #F0EEE9 — Owner */
+  --chip-owner-deep:        38 7% 32%;      /* #57534C */
+  --chip-amber-soft:        39 78% 93%;     /* #FBF1DE — Freelance */
+  --chip-amber-deep:        36 77% 31%;     /* #8A5A12 */
+
+  /* Avatar hash palette — chữ cái đầu trên nền màu (hash tên), luôn chữ trắng; dùng qua lib/avatar.ts */
+  --avatar-1:               292 68% 46%;    /* #B026C6 */
+  --avatar-2:               326 66% 57%;    /* #D9489A */
+  --avatar-3:               225 53% 49%;    /* #3A5BBF */
+  --avatar-4:               340 47% 55%;    /* #C2557A */
+  --avatar-5:               35 74% 43%;     /* #BE7A1C */
+  --avatar-6:               160 67% 37%;    /* #1F9D72 */
+
+  /* Chart / data-viz — 6 màu phân biệt cho Dashboard & Tài chính */
+  --chart-1:                292 68% 46%;    /* #B026C6 */
+  --chart-2:                258 81% 61%;    /* #7C4DEC */
+  --chart-3:                220 73% 55%;    /* #3B72E0 */
+  --chart-4:                160 67% 37%;    /* #1F9D72 */
+  --chart-5:                35 74% 53%;     /* #E0962E */
+  --chart-6:                332 66% 64%;    /* #E0679F */
+
+  /* Brand gradient — violet → magenta → pink (logo, CTA, nhấn thương hiệu). Stops exposed as tokens. */
+  --brand-violet:           269 100% 65%;   /* #A24BFF · điểm đầu gradient */
+  --brand-magenta:          297 79% 59%;    /* #E144E9 · điểm giữa gradient */
+  --brand-pink:             334 89% 64%;    /* #F5539A · điểm cuối gradient */
+  --gradient-primary:       linear-gradient(135deg, #A24BFF, #E144E9, #F5539A);
+}
+
+.dark {
+  /* Brand — magenta ramp đảo theo độ sáng (primary === primary-500) */
+  --primary:                291 59% 53%;    /* #B83FCE */
+  --primary-foreground:     0 0% 100%;      /* #FFFFFF */
+  --primary-50:             285 25% 13%;    /* #241828 · subtle bg */
+  --primary-100:            287 32% 16%;    /* #311C37 · border */
+  --primary-200:            288 39% 20%;    /* #3E1F46 */
+  --primary-300:            291 41% 34%;    /* #6E3379 */
+  --primary-400:            291 34% 45%;    /* #8E4C99 */
+  --primary-500:            291 59% 53%;    /* #B83FCE · = primary */
+  --primary-600:            292 77% 78%;    /* #E79BF2 · emphasis text */
+  --primary-700:            294 79% 83%;    /* #EFB3F6 */
+  --primary-800:            292 79% 89%;    /* #F3CCF9 */
+  --primary-900:            291 78% 93%;    /* #F7DFFB */
+  --primary-950:            300 68% 95%;    /* #FBEAFB */
+
+  /* Neutral — cool graphite (Meta-style) */
+  --background:             220 7% 8%;      /* #131416 */
+  --foreground:             223 17% 92%;    /* #E7E9EE */
+  --card:                   216 8% 12%;     /* #1B1D20 */
+  --card-foreground:        223 17% 92%;    /* #E7E9EE */
+  --popover:                214 10% 14%;    /* #202327 */
+  --popover-foreground:     223 17% 92%;    /* #E7E9EE */
+  --secondary:              214 9% 15%;     /* #24272B */
+  --secondary-foreground:   223 17% 92%;    /* #E7E9EE */
+  --muted:                  214 9% 16%;     /* #25282C */
+  --muted-foreground:       217 10% 64%;    /* #9AA1AC */
+  --accent:                 213 10% 18%;    /* #2A2E33 */
+  --accent-foreground:      223 17% 92%;    /* #E7E9EE */
+  --border:                 216 10% 20%;    /* #2E3238 */
+  --input:                  215 10% 24%;    /* #383D44 */
+  --divider:                213 11% 16%;    /* #24282D */
+  --ring:                   291 59% 53%;    /* #B83FCE */
+
+  /* Semantic — nền soft trộn 18% trên --background mới */
+  --warning:                35 71% 58%;     /* #E0A24A */
+  --warning-foreground:     220 7% 8%;      /* #131416 */
+  --warning-soft:           36 29% 17%;     /* #382E1F */
+  --warning-deep:           37 81% 70%;     /* #F0C173 */
+  --info:                   204 68% 58%;    /* #4BA3DD */
+  --info-foreground:        220 7% 8%;      /* #131416 */
+  --info-soft:              205 33% 17%;    /* #1D2E3A */
+  --info-deep:              201 75% 75%;    /* #8FCDEF */
+  --success:                145 54% 45%;    /* #35B36A */
+  --success-foreground:     220 7% 8%;      /* #131416 */
+  --success-soft:           150 32% 15%;    /* #193125 */
+  --success-deep:           144 49% 66%;    /* #7FD3A0 */
+  --destructive:            356 79% 67%;    /* #ED6870 */
+  --destructive-foreground: 0 0% 100%;      /* #FFFFFF */
+  --destructive-soft:       352 25% 18%;    /* #3A2326 */
+  --destructive-deep:       356 74% 77%;    /* #F09AA0 */
+
+  /* Position chips */
+  --chip-main-soft:         286 34% 17%;    /* #341D3B */
+  --chip-main-deep:         291 75% 80%;    /* #E7A6F2 */
+  --chip-blue-soft:         219 29% 20%;    /* #242E41 */
+  --chip-blue-deep:         219 70% 80%;    /* #A9C2F0 */
+  --chip-pink-soft:         320 25% 19%;    /* #3C2434 */
+  --chip-pink-deep:         327 71% 80%;    /* #F0A8D0 */
+  --chip-owner-soft:        214 9% 15%;     /* #24272B */
+  --chip-owner-deep:        217 12% 79%;    /* #C4C9D1 */
+  --chip-amber-soft:        34 29% 19%;     /* #3E3222 */
+  --chip-amber-deep:        37 81% 70%;     /* #F0C173 */
+
+  /* Avatar hash palette — giữ nguyên */
+  --avatar-1:               291 63% 57%;    /* #C24BD6 */
+  --avatar-2:               326 66% 64%;    /* #E066AB */
+  --avatar-3:               224 59% 60%;    /* #5E7FD6 */
+  --avatar-4:               339 51% 62%;    /* #D06E90 */
+  --avatar-5:               34 68% 53%;     /* #D89234 */
+  --avatar-6:               160 55% 47%;    /* #35B98C */
+
+  /* Chart / data-viz — giữ nguyên */
+  --chart-1:                292 66% 60%;    /* #CB57DD */
+  --chart-2:                259 80% 71%;    /* #9E78F0 */
+  --chart-3:                219 77% 67%;    /* #6A97EC */
+  --chart-4:                159 54% 47%;    /* #37B98C */
+  --chart-5:                36 77% 62%;     /* #E8AB52 */
+  --chart-6:                332 70% 73%;    /* #EA88B5 */
+
+  --gradient-primary:       linear-gradient(135deg, #A24BFF, #E144E9, #F5539A);
+}

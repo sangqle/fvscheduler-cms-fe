@@ -1,0 +1,38 @@
+:root {
+  --font-sans: var(--font-be-vietnam-pro, ui-sans-serif, system-ui, sans-serif);
+  /* IBM Plex Mono — mã số, nhãn (labels), giá tiền. Loaded via next/font in layout.tsx. */
+  --font-mono: var(--font-ibm-plex-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  /* Newsreader — nhấn editorial nghiêng trong tiêu đề + logo wordmark. next/font in layout.tsx. */
+  --font-serif: var(--font-newsreader, ui-serif, Georgia, "Times New Roman", serif);
+  /* Alias kept for the `font-display` utility (FramePreview) — same Newsreader stack. */
+  --font-display: var(--font-newsreader, ui-serif, Georgia, Cambria, "Times New Roman", Times, serif);
+  /* Playfair Display — logo wordmark (BrandLogo, Sidebar, AuthBrand). next/font in layout.tsx. */
+  --font-logo: var(--font-playfair, "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif);
+
+  /* Display — fluid: scale down on phones, cap at the desktop size. */
+  --text-display-2xl: clamp(2.25rem, 6vw + 1rem, 3.75rem);   /* 36px → 60px */
+  --text-display-xl:  clamp(2rem, 5vw + 0.5rem, 3rem);       /* 32px → 48px */
+  --text-display-lg:  clamp(1.75rem, 4vw + 0.5rem, 2.25rem); /* 28px → 36px */
+
+  /* Headings */
+  --text-h1: 1.875rem;  /* 30px */
+  --text-h2: 1.5rem;    /* 24px */
+  --text-h3: 1.25rem;   /* 20px */
+  --text-h4: 1.125rem;  /* 18px */
+
+  /* Body */
+  --text-body-lg: 1.125rem;  /* 18px */
+  --text-body:    1rem;      /* 16px */
+  --text-body-sm: 0.875rem;  /* 14px */
+  --text-caption: 0.75rem;   /* 12px */
+
+  --leading-tight:  1.25;
+  --leading-snug:   1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.625;
+
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+}

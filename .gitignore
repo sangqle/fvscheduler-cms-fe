@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# Build output
+.next/
+out/
+build
+
+# Production
+/.vercel
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Misc
+*.swp
+.DS_Store
+Thumbs.db
+.vercel
+.env*.local
+
+# Git worktrees
+.worktrees/
+
+# Env files: ignore everything, then allow the two that must be in git.
+# .env.production holds only NEXT_PUBLIC_* values, which are inlined into the
+# client bundle at build time and are public regardless — Vercel builds from
+# this repo, so if it is ignored the deployed app gets no config at all.
+# Real secrets (NEXTAUTH_SECRET) live in the Vercel dashboard, never here.
+.env*
+!.env.example
+!.env.production
