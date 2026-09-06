@@ -13,12 +13,21 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Spinner } from '@/components/ui/Spinner';
 import { Text } from '@/components/ui/Text';
 import { WorkspacePicker } from '@/components/admin/mail/WorkspacePicker';
-import { useMailPreview } from '@/hooks/useAdminMail';
+import { useMailPreview, useMailVariables } from '@/hooks/useAdminMail';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { apiErrorMessage } from '@/lib/api/auth';
+import { declaredGroups, renderDraft, unsupportedPebble } from '@/lib/admin/mail';
 import { cn } from '@/lib/utils';
-import type { MailContextInput } from '@/types/admin';
+import type { MailContextGroup, MailContextInput } from '@/types/admin';
 
 type Source = 'sample' | 'workspace' | 'account';
+
+/**
+ * `draft`: dựng tại trình duyệt theo nội dung đang gõ, đổi theo từng ký tự. `saved`: server render
+ * bản đang phát hành. Hai bản trả lời hai câu hỏi khác nhau ("tôi vừa sửa ra cái gì" và "người nhận
+ * đang thấy cái gì"), nên chúng là hai lựa chọn song song chứ không phải một cái thay cái kia.
+ */
+type Mode = 'draft' | 'saved';
 
 /** `split`: nửa hàng cạnh ô soạn. `full`: một mình trên bề ngang trang. */
 export type PreviewPane = 'split' | 'full';
@@ -43,13 +52,30 @@ const FRAME_HEIGHT: Record<PreviewPane, string> = {
 const FRAME_FILL = 'xl:h-auto xl:min-h-64 xl:flex-1';
 
 /**
- * Xem trước render **bản đang phát hành** ở server, không gửi gì và không ghi gì. Thay đổi chưa lưu
- * không nằm trong bản đó, nên khối này nói thẳng điều ấy thay vì để người dùng tưởng đã thấy bản nháp.
+ * Nhịp chờ trước khi dựng lại bản nháp. Đủ ngắn để cảm giác là "theo kịp lúc gõ", đủ dài để một câu
+ * gõ liền mạch chỉ tốn một lần nạp lại iframe thay vì một lần mỗi ký tự.
+ */
+const DRAFT_DEBOUNCE_MS = 300;
+
+/**
+ * Hai bản xem trước cho cùng một template.
+ *
+ * **Bản nháp** dựng ngay tại trình duyệt từ nội dung đang gõ. Nó phải nằm ở client vì đường lưu của
+ * module này sinh một version bất biến mỗi lần ghi: không thể lưu mỗi nhịp gõ chỉ để nhờ server
+ * render. Đổi lại nó chỉ thay được `{{ tenBien }}`; `{% include %}`, `{% if %}` và mọi biểu thức
+ * khác giữ nguyên văn, và khối này nói thẳng ra thay vì để người soạn tưởng chúng đã chạy.
+ *
+ * **Bản đã lưu** là `POST /preview` cũ: server render đúng version đang phát hành, chạy đủ Pebble và
+ * đọc được ngữ cảnh thật của một workspace hoặc tài khoản. Nó không gửi gì và không ghi gì.
  */
 export function TemplatePreview({
   code,
   currentVersion,
   customVariables,
+  draftSubject,
+  draftHtml,
+  draftCustomVariables,
+  draftContext,
   dirty,
   canSave,
   saving,
@@ -58,8 +84,14 @@ export function TemplatePreview({
 }: {
   code: string;
   currentVersion: number;
-  /** Biến tự do của **bản đã lưu**: preview render đúng bản đó, không phải form đang sửa. */
+  /** Biến tự do của **bản đã lưu**: server render đúng bản đó, không phải form đang sửa. */
   customVariables: string[];
+  /** Ba prop dưới đây là form đang sửa, nguồn của bản nháp. */
+  draftSubject: string;
+  draftHtml: string;
+  draftCustomVariables: string[];
+  /** `requiredContext` của form (không gồm `COMMON`): quyết định lấy giá trị mẫu của nhóm nào. */
+  draftContext: MailContextGroup[];
   dirty: boolean;
   canSave: boolean;
   saving: boolean;
@@ -68,10 +100,15 @@ export function TemplatePreview({
   pane: PreviewPane;
 }) {
   const preview = useMailPreview(code);
+  const variables = useMailVariables();
+  const [mode, setMode] = React.useState<Mode>('draft');
   const [source, setSource] = React.useState<Source>('sample');
   const [workspaceId, setWorkspaceId] = React.useState('');
   const [accountId, setAccountId] = React.useState('');
   const [values, setValues] = React.useState<Record<string, string>>({});
+
+  /** Biến tự do đang hiện ô nhập: bản nháp đọc theo form, bản đã lưu đọc theo version trên server. */
+  const shownCustom = mode === 'draft' ? draftCustomVariables : customVariables;
 
   const buildContext = React.useCallback((): MailContextInput => {
     const variables: Record<string, string> = {};
@@ -99,7 +136,45 @@ export function TemplatePreview({
     run(contextRef.current());
   }, [run, code, currentVersion]);
 
-  const idle = !preview.data && !preview.isPending && !preview.error;
+  /** Giá trị mẫu của đúng những nhóm form đã khai; `declaredGroups` tự cộng `COMMON`. */
+  const samples = React.useMemo(() => {
+    const groups = declaredGroups(draftContext);
+    const map: Record<string, string> = {};
+    for (const group of variables.data ?? []) {
+      if (!groups.has(group.group)) continue;
+      for (const v of group.variables) map[v.name] = v.sample;
+    }
+    return map;
+  }, [variables.data, draftContext]);
+
+  const draftValues = React.useMemo(() => {
+    const map: Record<string, string> = { ...samples };
+    // Biến tự do bỏ trống rơi về `[tên]` y như server, để bản nháp và bản đã lưu đọc ra giống nhau.
+    for (const name of draftCustomVariables) map[name] = values[name]?.trim() || `[${name}]`;
+    return map;
+  }, [samples, draftCustomVariables, values]);
+
+  const settledHtml = useDebouncedValue(draftHtml, DRAFT_DEBOUNCE_MS);
+  const settledSubject = useDebouncedValue(draftSubject, DRAFT_DEBOUNCE_MS);
+
+  const draft = React.useMemo(
+    () => ({
+      subject: renderDraft(settledSubject, draftValues),
+      html: renderDraft(settledHtml, draftValues),
+    }),
+    [settledSubject, settledHtml, draftValues],
+  );
+
+  const unsupported = React.useMemo(
+    () => unsupportedPebble(settledSubject, settledHtml),
+    [settledSubject, settledHtml],
+  );
+
+  /** Đang trong nhịp chờ debounce: khung thư còn là bản của ký tự trước. */
+  const settling = mode === 'draft' && (settledHtml !== draftHtml || settledSubject !== draftSubject);
+  const shown = mode === 'draft' ? draft : preview.data;
+  const savedPending = mode === 'saved' && preview.isPending;
+  const savedIdle = mode === 'saved' && !preview.data && !preview.isPending && !preview.error;
   const frame = cn(FRAME_HEIGHT[pane], FRAME_FILL);
 
   return (
@@ -109,61 +184,95 @@ export function TemplatePreview({
       <CardHeader className="gap-3 xl:shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle size="md">Xem trước</CardTitle>
-          <Badge variant="secondary" size="sm" mono="plain">
-            v{currentVersion} đang phát hành
-          </Badge>
+          <div className="flex items-center gap-2">
+            {settling && <Spinner size="sm" />}
+            {mode === 'draft' ? (
+              <Badge variant={dirty ? 'warning' : 'muted'} size="sm" mono="plain">
+                {dirty ? `bản nháp, chưa lưu` : `trùng v${currentVersion}`}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" size="sm" mono="plain">
+                v{currentVersion} đang phát hành
+              </Badge>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-2">
-          <SegmentedControl
-            size="sm"
-            aria-label="Nguồn ngữ cảnh xem trước"
-            value={source}
-            onValueChange={(v) => setSource(v as Source)}
-            options={[
-              { value: 'sample', label: 'Dữ liệu mẫu' },
-              { value: 'workspace', label: 'Workspace thật' },
-              { value: 'account', label: 'Tài khoản thật' },
-            ]}
-          />
-          {source === 'workspace' && (
-            <div className="flex min-w-52 flex-1 flex-col gap-1">
-              <Label htmlFor="preview-workspace">Lấy ngữ cảnh từ workspace</Label>
-              <WorkspacePicker id="preview-workspace" value={workspaceId} onChange={setWorkspaceId} />
-            </div>
-          )}
-          {source === 'account' && (
-            <div className="flex min-w-52 flex-1 flex-col gap-1">
-              <Label htmlFor="preview-account">Lấy ngữ cảnh từ tài khoản</Label>
-              <Input
-                id="preview-account"
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                placeholder="ac8AA109MXP1XRBY"
-                className="font-mono"
-              />
-            </div>
-          )}
-          <Button variant="outline" size="sm" onClick={() => preview.mutate(buildContext())} disabled={preview.isPending}>
-            {preview.isPending ? <Spinner size="sm" /> : <RefreshCw className="size-3.5" />}
-            Xem lại
-          </Button>
-        </div>
+        <SegmentedControl
+          size="sm"
+          aria-label="Bản để xem trước"
+          value={mode}
+          onValueChange={(v) => setMode(v as Mode)}
+          options={[
+            { value: 'draft', label: 'Bản nháp' },
+            { value: 'saved', label: `Bản đã lưu v${currentVersion}` },
+          ]}
+        />
 
-        {source === 'account' && (
+        {mode === 'draft' ? (
           <Text variant="caption" muted>
-            Dán id tài khoản, ở đây chưa có ô tìm theo tên. Để trống cả hai nguồn thì mọi biến ACCOUNT và
-            WORKSPACE dùng giá trị mẫu của catalog.
+            Dựng thẳng trong trình duyệt theo nội dung đang gõ, dùng giá trị mẫu của catalog. Cần ngữ
+            cảnh thật của một workspace hay tài khoản thì lưu rồi xem bản đã lưu.
           </Text>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-end gap-2">
+              <SegmentedControl
+                size="sm"
+                aria-label="Nguồn ngữ cảnh xem trước"
+                value={source}
+                onValueChange={(v) => setSource(v as Source)}
+                options={[
+                  { value: 'sample', label: 'Dữ liệu mẫu' },
+                  { value: 'workspace', label: 'Workspace thật' },
+                  { value: 'account', label: 'Tài khoản thật' },
+                ]}
+              />
+              {source === 'workspace' && (
+                <div className="flex min-w-52 flex-1 flex-col gap-1">
+                  <Label htmlFor="preview-workspace">Lấy ngữ cảnh từ workspace</Label>
+                  <WorkspacePicker id="preview-workspace" value={workspaceId} onChange={setWorkspaceId} />
+                </div>
+              )}
+              {source === 'account' && (
+                <div className="flex min-w-52 flex-1 flex-col gap-1">
+                  <Label htmlFor="preview-account">Lấy ngữ cảnh từ tài khoản</Label>
+                  <Input
+                    id="preview-account"
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    placeholder="ac8AA109MXP1XRBY"
+                    className="font-mono"
+                  />
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => preview.mutate(buildContext())}
+                disabled={preview.isPending}
+              >
+                {preview.isPending ? <Spinner size="sm" /> : <RefreshCw className="size-3.5" />}
+                Xem lại
+              </Button>
+            </div>
+
+            {source === 'account' && (
+              <Text variant="caption" muted>
+                Dán id tài khoản, ở đây chưa có ô tìm theo tên. Để trống cả hai nguồn thì mọi biến
+                ACCOUNT và WORKSPACE dùng giá trị mẫu của catalog.
+              </Text>
+            )}
+          </>
         )}
       </CardHeader>
 
       <CardContent className="flex flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
-        {customVariables.length > 0 && (
+        {shownCustom.length > 0 && (
           <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
             <Label>Giá trị thử cho biến tự do</Label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {customVariables.map((name) => (
+              {shownCustom.map((name) => (
                 <div key={name} className="flex min-w-0 flex-col gap-1">
                   <Label htmlFor={`preview-var-${name}`} className="font-mono">
                     {name}
@@ -179,18 +288,33 @@ export function TemplatePreview({
               ))}
             </div>
             <Text variant="caption" muted>
-              Để trống thì server render đúng chuỗi <code className="font-mono">[tên biến]</code>, không phải
-              lỗi. Danh sách này là biến tự do của v{currentVersion}, không phải của form đang sửa.
+              Để trống thì chỗ đó render đúng chuỗi <code className="font-mono">[tên biến]</code>, không
+              phải lỗi.{' '}
+              {mode === 'draft'
+                ? 'Danh sách này là biến tự do của form đang sửa.'
+                : `Danh sách này là biến tự do của v${currentVersion}, không phải của form đang sửa.`}
             </Text>
           </div>
         )}
 
-        {dirty && (
+        {mode === 'draft' && unsupported.length > 0 && (
+          <Alert variant="warning">
+            <AlertDescription className="flex flex-col items-start gap-1">
+              <span>
+                Bản nháp dựng ở trình duyệt nên {unsupported.length} thẻ Pebble dưới đây chưa chạy, chúng
+                đang hiện nguyên văn trong khung thư. Lưu rồi xem bản đã lưu để thấy kết quả thật.
+              </span>
+              <span className="font-mono text-xs">{unsupported.slice(0, 6).join('  ·  ')}</span>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {mode === 'saved' && dirty && (
           <Alert variant="warning">
             <AlertDescription className="flex flex-col items-start gap-2">
               <span>
-                Bản xem trước là v{currentVersion} trên server. Thay đổi chưa lưu chưa nằm trong đó: server
-                không render được nội dung chưa lưu.
+                Bản này là v{currentVersion} trên server, chưa có thay đổi bạn đang gõ. Xem thay đổi ngay
+                thì chuyển sang tab Bản nháp, còn muốn đúng bản server thì lưu.
               </span>
               <Button size="sm" onClick={onSaveAndPreview} disabled={!canSave}>
                 {saving ? <Spinner size="sm" /> : <Save className="size-4" />}
@@ -200,7 +324,7 @@ export function TemplatePreview({
           </Alert>
         )}
 
-        {preview.error && (
+        {mode === 'saved' && preview.error && (
           <Alert variant="destructive">
             <AlertDescription>
               {apiErrorMessage(preview.error, 'Không render được bản xem trước.')}
@@ -208,15 +332,15 @@ export function TemplatePreview({
           </Alert>
         )}
 
-        {preview.isPending && <Skeleton className={cn('w-full', frame)} />}
+        {savedPending && <Skeleton className={cn('w-full', frame)} />}
 
-        {idle && (
+        {savedIdle && (
           <Text variant="caption" muted>
             Chưa có bản render nào, bấm Xem lại để chạy.
           </Text>
         )}
 
-        {preview.data && !preview.isPending && (
+        {shown && !savedPending && (
           // Khung giả lập hộp thư: 600px là bề ngang mọi trình đọc mail đều dựng được. Chuỗi
           // `min-h-0` chạy suốt từ đây xuống khung thư: thiếu một mắt thôi là `min-height: auto`
           // của flex item giữ nguyên chiều cao nội dung và `flex-1` không co lại được.
@@ -226,7 +350,7 @@ export function TemplatePreview({
                 <Text variant="caption" muted>
                   Tiêu đề
                 </Text>
-                <p className="text-sm font-semibold">{preview.data.subject || '—'}</p>
+                <p className="text-sm font-semibold">{shown.subject || '—'}</p>
               </div>
               {/*
                 sandbox rỗng: template do admin nhập vẫn là HTML lạ với trang này, không cho chạy gì.
@@ -240,12 +364,18 @@ export function TemplatePreview({
                   frame,
                 )}
               >
-                {/* `h-full`: bề cao nằm ở khung ngoài để tay kéo `resize-y` co giãn đúng khung thư,
-                    thay vì chừa một mảng trống dưới một iframe cao cố định. */}
+                {/*
+                  `key` theo chế độ: đổi tab là đổi hẳn tài liệu, để React dựng iframe mới thay vì
+                  thay `srcDoc` trên khung cũ và giữ lại chỗ đang cuộn của bản kia.
+
+                  `h-full`: bề cao nằm ở khung ngoài để tay kéo `resize-y` co giãn đúng khung thư,
+                  thay vì chừa một mảng trống dưới một iframe cao cố định.
+                */}
                 <iframe
-                  title={`Xem trước ${code}`}
+                  key={mode}
+                  title={mode === 'draft' ? `Xem trước bản nháp ${code}` : `Xem trước ${code}`}
                   sandbox=""
-                  srcDoc={preview.data.html}
+                  srcDoc={shown.html}
                   className="h-full w-full"
                 />
               </div>

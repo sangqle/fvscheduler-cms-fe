@@ -4,11 +4,11 @@ Updated: 2026-09-06 · Thiết kế: CMS-10..14 · Backend: `../fvscheduler/docs
 
 ## Mục đích
 
-Soạn và phát hành mail template lưu ở DB (mỗi lần lưu là một version bất biến), xem trước bản đã
-lưu, gửi thử một địa chỉ, rồi tạo chiến dịch gửi hàng loạt tới chủ workspace hoặc tài khoản và
-theo dõi tiến độ, nhật ký gửi (outbox).
+Soạn và phát hành mail template lưu ở DB (mỗi lần lưu là một version bất biến), xem trước bản nháp
+đang gõ và bản đã lưu, gửi thử một địa chỉ, rồi tạo chiến dịch gửi hàng loạt tới chủ workspace hoặc
+tài khoản và theo dõi tiến độ, nhật ký gửi (outbox).
 
-**Không có**: trang tạo template riêng (tạo bằng dialog), xem trước bản nháp chưa lưu, tìm kiếm
+**Không có**: trang tạo template riêng (tạo bằng dialog), server render nội dung chưa lưu, tìm kiếm
 tài khoản (chỉ có id dán tay hoặc suy từ workspace), xóa template (chỉ tắt `active`), rollback
 version (restore = PUT lại nội dung cũ thành version mới), id/chi tiết/gửi lại từng message, hẹn
 giờ gửi, trigger tự động (phase 2, nhóm ngữ cảnh `SUBSCRIPTION`).
@@ -40,20 +40,58 @@ cho nhật ký, nên chuyển tab không làm mất bộ lọc của tab kia.
   chứ không phải bảng rỗng.
 
 ### `/mail/templates/[code]`
-`TemplateEditorScreen` (prop `code`) · **luôn chia đôi**, không có công tắc bố cục: ô soạn bên trái,
-`TemplatePreview` dính bên phải (`lg:flex-row`, dưới `lg` hai khối xếp chồng). Bỏ hẳn
-`?view=edit|split|preview`: hai chế độ kia chỉ là chia đôi bị che một nửa, nên hàng tab luôn sáng ô
-giữa và tốn một dòng ngang mà không nói thêm gì. Từ `lg` cột phải cao đúng `calc(100dvh - 8rem)`
-(topbar 57px + thanh công cụ 48px + đệm dưới 24px) và khung thư `flex-1` nuốt hết chỗ còn lại trong
-thẻ, sàn `min-h-64`, `resize-none`; dưới `lg` khung chốt `44rem` và kéo cao được. Nội dung: form
-metadata (tên, mô tả,
-category, `ChipListEditor` cho `requiredContext` không gồm `COMMON`) + editor `subjectTemplate` /
-`htmlBody` (`components/ui/CodeEditor.tsx`: đánh số dòng, tô cú pháp HTML + Pebble bằng token,
-cuộn và tô lại dòng lỗi mà `422` chỉ ra) + `VariablePanel` (palette biến catalog lọc theo nhóm đã khai, cộng chip biến
-tự do, click để chèn tại con trỏ) + `TemplatePreview` (luôn render **bản đã lưu**, có ghi chú khi
-form đang dirty) + `VersionHistory` (nằm ngay trong màn, không phải drawer riêng, mới nhất trước) +
-nút "Gửi thử" mở `TestSendDialog`, nút "Tạo chiến dịch từ template này" mở `CreateCampaignDialog`.
-Nút lưu ghi `Lưu thành v{currentVersion + 1}`.
+`TemplateEditorScreen` (prop `code`) · màn duy nhất chạy **trọn bề ngang**: `isFullWidthRoute` trong
+`lib/admin/nav.ts` cho `AdminShell` bỏ `max-w-350` ở route này, vì bó vào 1400px thì mỗi cột còn
+dưới 700px, hẹp hơn cột thư 600px mà khung xem trước phải dựng.
+
+Một **thanh công cụ dính** đỉnh vùng cuộn (`sticky top-0`, bleed `-mx-4 sm:-mx-6`; `main` là vùng
+cuộn duy nhất của app nên `sticky` bám vào nó) mang: công tắc bố cục, nút mở `VersionHistory`, và
+cặp `Hoàn tác` / `Lưu thành v{currentVersion + 1}`. Nút lưu nằm ở đây chứ không nằm giữa trang, để
+không phải cuộn ngược lên mới bấm được.
+
+**Công tắc bố cục** `?view=edit|split|preview` (`SegmentedControl`, mặc định `split` và bỏ khỏi URL,
+giá trị lạ quy về mặc định). `Chia đôi` chỉ có mặt từ `xl`: ở đúng 1024px hai cột còn ~364px mỗi
+bên, hẹp hơn cả cột thư, nên dưới `xl` chỉ còn `Soạn` / `Xem trước` và một `split` lưu sẵn hành xử
+như `edit`. `useMediaQuery` trả `false` ở lần render đầu nên lượt sơn đầu tiên rơi vào `Soạn`, một
+bố cục hợp lệ chứ không phải thứ phải vá sau hydrate. **Hai cột luôn mount**, ẩn hiện bằng class:
+unmount `CodeEditor` là mất vị trí con trỏ và chỗ đang cuộn, unmount `TemplatePreview` là vứt đi một
+lượt render của server.
+
+Từ `xl` hai cột đứng cạnh nhau `flex-45` / `flex-55` (khung thư không cuộn ngang được, ô soạn mã thì
+có, nên preview lấy phần hơn), cột phải `sticky top-14` cao đúng `calc(100dvh - 137px)` (topbar 57 +
+thanh công cụ 53 + 3 hở + đệm dưới 24) nên nó đứng yên trong lúc form cuộn. Dưới `xl` khung thư chốt
+`44rem` (`split`) hoặc `52rem` (`full`) và kéo cao được.
+
+Nội dung cột trái: form metadata (tên, mô tả, category, `ChipListEditor` cho `requiredContext` không
+gồm `COMMON`) + `VariablePanel` thu thành **dải ngang** ngay trên ô soạn (chip bấm để chèn tại con
+trỏ, nhóm chưa khai thì mờ và bấm vào sẽ mời khai thêm, kèm `Chèn chân trang chung` và lối mở
+`VariableCatalogDialog`; trạng thái mở mặc định đi bằng **container query** `@lg` chứ không phải
+media query, vì bề ngang cột không đơn điệu theo viewport: xếp chồng ở 1279px nó rộng ~1000px rồi
+tụt còn ~443px đúng lúc hàng tách đôi ở `xl`) + editor `subjectTemplate` / `htmlBody`
+(`components/ui/CodeEditor.tsx`: đánh số dòng, tô cú pháp HTML + Pebble bằng token, cuộn và tô lại
+dòng lỗi mà `422` chỉ ra).
+
+Cột phải là `TemplatePreview` (prop `pane`), có **hai bản** chọn bằng `SegmentedControl`:
+
+- **Bản nháp** (mặc định) dựng ngay ở trình duyệt từ `form.subjectTemplate` / `form.htmlBody`, cập
+  nhật theo từng ký tự qua `useDebouncedValue(300ms)`. Phải nằm ở client vì mỗi lần ghi sinh một
+  version bất biến: không thể lưu mỗi nhịp gõ chỉ để nhờ server render, và `MailPreviewRequest` của
+  backend cũng không có chỗ nhận nội dung nháp. `renderDraft` chỉ thay `{{ tenBien }}` bằng `sample`
+  của catalog (lọc theo `form.requiredContext`) cộng ô "giá trị thử", escape HTML y như autoescape
+  của Pebble, biến thiếu rơi về `[tên]`. `{% include %}`, `{% if %}`, `{{ a.b }}`, `{{ a | upper }}`
+  giữ **nguyên văn** và `unsupportedPebble` liệt kê chúng trong một `Alert` cảnh báo, chứ không xoá
+  đi để người soạn tưởng chỗ đó trống thật.
+- **Bản đã lưu v{n}** là `POST /preview` cũ: server render đúng version đang phát hành, chạy đủ
+  Pebble, đọc được ngữ cảnh thật của workspace hoặc tài khoản. Đang dirty thì có cảnh báo và nút
+  `Lưu và xem trước`.
+
+`iframe` mang `key={mode}`: đổi tab là dựng khung mới, không thay `srcDoc` trên khung cũ rồi giữ lại
+chỗ đang cuộn của bản kia. `VersionHistory` là một `SlideOver` mở từ thanh công cụ,
+đúng như brief 4.2 và mục 10 yêu cầu; dialog "Xem" của nó ở `z-50` nên vẫn nổi trên panel `z-45`,
+cùng khuôn `OrderDrawer` mở `MarkPaidDialog`. Nút `Gửi thử` và `Tạo chiến dịch từ template này` ở
+header trang, không nhét vào thanh công cụ: thanh đó phải giữ một dòng ở 1280px và không ai với tới
+hai nút kia giữa lúc đang gõ.
+
 - Lỗi `422`: render từng dòng `validationProblems(error).map(explainProblem)`, không gộp một câu.
 - Lỗi `409`: dialog "Có người vừa lưu, hiện là v{concurrentVersion(error)}", giữ nguyên nội dung
   đang gõ, không tự tải lại và ghi đè.
@@ -105,7 +143,12 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
   sinh version mới, không có draft và không có save chỉ đổi metadata. `active` tách riêng khỏi nội
   dung, đổi bằng `PATCH .../active`, không đi qua `PUT`.
 - **Chiến dịch**: chỉ chọn template `active` và không `PARTIAL` (409 nếu vi phạm). Đúng một trong
-  `workspaceIds` / `accountIds`, không rỗng (400 nếu khác). Template khai `requiredContext` chứa
+  nhắm-workspace (`workspaceIds` hoặc `rawWorkspaceIds`) và `accountIds`, không rỗng (400 nếu khác).
+  Ô dán id ở bước 2 nhận **cả id mờ `wk…` lẫn id số thô** dán từ truy vấn SQL, tự nhận dạng và gửi
+  lên đúng khóa. Trộn hai dạng trong một danh sách thì UI chặn, không phải vì backend báo lỗi mà vì
+  backend **im lặng**: thấy `rawWorkspaceIds` khác rỗng là nó dùng danh sách đó và bỏ hẳn
+  `workspaceIds`, nên nửa còn lại biến mất không dấu vết. Id số chỉ mở cho workspace, tài khoản
+  không có đường này. Template khai `requiredContext` chứa
   `WORKSPACE` thì khóa lựa chọn theo tài khoản trên UI. `variables` gửi đúng và đủ tập
   `template.customVariables`, không thừa không thiếu (422 nếu sai). `dryRun: true` chỉ đếm, response
   không có khóa `campaignCode`; `queued === 0` không phải lỗi, chiến dịch vẫn tạo DONE với
@@ -124,9 +167,16 @@ Primitive mới thêm cho module này: `src/components/ui/CodeEditor.tsx` (`Code
 `CodeBlock` chỉ đọc, dùng ở `VersionHistory`). Không kéo thư viện editor nào: template mail chỉ vài
 chục dòng, đổi lại giữ được toàn bộ màu bằng token thay vì một theme mang màu cứng.
 
+Primitive được mở rộng để màn này khỏi style tại chỗ: `Card padding="sm"` + `CardTitle size="md"`
+(truyền `className="p-4"` vào `Card` **không** có tác dụng từ 640px trở lên, vì `sm:p-6` của chính
+primitive sống sót qua `tailwind-merge` và thắng ở cascade), `CardContent standalone` cho thẻ không
+có header, `Badge mono="plain"` (bản `mono` sẵn có kèm `uppercase` nên sẽ in ra "V3"), và
+`SegmentedControl` đổi `role="tablist"` thành `role="radiogroup"` vì mọi chỗ dùng nó trong repo đều
+là chọn-một chứ không phải tab (tab thật đi bằng primitive `Tabs`).
+
 Luật dùng chung: `src/lib/admin/mail.ts` (regex mã/biến, `validationProblems` + `explainProblem` +
 `problemLine` cho 422, `concurrentVersion` cho 409, `insertVariable`, `declaredGroups`,
-`FOOTER_INCLUDE`, `isCampaignLive`). `isCampaignLive` là vị từ dùng chung cho nhịp polling của hook
+`renderDraft` + `unsupportedPebble` cho xem trước bản nháp, `FOOTER_INCLUDE`, `isCampaignLive`). `isCampaignLive` là vị từ dùng chung cho nhịp polling của hook
 và chỉ báo "đang theo dõi" trên màn chi tiết: hợp đồng đóng cửa sổ theo `status`, nhưng một chiến
 dịch vừa hủy vẫn còn dòng `SENDING` đang bay nên cộng thêm hai bộ đếm; hai nơi lệch vị từ là màn
 báo "số liệu đã chốt" trong lúc query vẫn tự đọc lại. `explainProblem(problem, context)` nhận `'template' | 'campaign'` vì

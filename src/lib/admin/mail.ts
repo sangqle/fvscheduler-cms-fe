@@ -130,6 +130,57 @@ export function declaredGroups(requiredContext: MailContextGroup[]): Set<MailCon
   return new Set<MailContextGroup>(['COMMON', ...requiredContext]);
 }
 
+/**
+ * Một thẻ Pebble bất kỳ trong nội dung: `{{ ... }}` hoặc `{% ... %}`. Không lồng nhau nên khớp
+ * không tham lam là đủ.
+ */
+const PEBBLE_TOKEN = /\{\{[\s\S]*?\}\}|\{%[\s\S]*?%\}/g;
+
+/** Thẻ chỉ đọc thẳng một tên biến, dạng duy nhất mà trình duyệt tự thay được. */
+const PLAIN_INTERPOLATION = /^\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}$/;
+
+/** Pebble bật autoescape cho HTML; bản dựng ở trình duyệt phải escape y hệt, không thì hai bên lệch. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Dựng **bản nháp** ngay trong trình duyệt để xem trước cập nhật theo từng ký tự, không phải đợi lưu
+ * (lưu là sinh hẳn một version mới, không thể gọi mỗi nhịp gõ).
+ *
+ * Đây là bản dựng **gần đúng có chủ đích**: nó chỉ thay `{{ tenBien }}`, thứ duy nhất suy ra được mà
+ * không cần server. Mọi thẻ khác giữ nguyên văn chứ không xoá đi, vì xoá thì người soạn tưởng chỗ đó
+ * trống thật; `unsupportedPebble` liệt kê đúng những thẻ đó để UI nói thẳng là chúng chưa chạy.
+ * Tên không có trong `values` rơi về `[tên]`, cùng quy ước placeholder mà server dùng cho biến tự do
+ * bỏ trống, nên hai bản đọc ra giống nhau.
+ */
+export function renderDraft(source: string, values: Record<string, string>): string {
+  return source.replace(PEBBLE_TOKEN, (token) => {
+    const name = PLAIN_INTERPOLATION.exec(token)?.[1];
+    if (!name) return token;
+    return escapeHtml(values[name] ?? `[${name}]`);
+  });
+}
+
+/**
+ * Những thẻ Pebble mà bản dựng ở trình duyệt không chạy được: `{% include %}`, `{% if %}`, `{% for %}`,
+ * `{{ a.b }}`, `{{ a | upper }}`. Trả về danh sách đã khử trùng lặp, theo thứ tự xuất hiện.
+ */
+export function unsupportedPebble(...sources: string[]): string[] {
+  const found = new Set<string>();
+  for (const source of sources) {
+    for (const token of source.match(PEBBLE_TOKEN) ?? []) {
+      if (!PLAIN_INTERPOLATION.test(token)) found.add(token.trim());
+    }
+  }
+  return [...found];
+}
+
 /** Chèn một đoạn vào vị trí con trỏ của textarea/input đang điều khiển. */
 export function insertAtCursor(
   el: HTMLTextAreaElement | HTMLInputElement | null,

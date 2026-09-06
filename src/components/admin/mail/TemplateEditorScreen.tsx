@@ -701,6 +701,10 @@ export function TemplateEditorScreen({ code }: { code: string }) {
             code={code}
             currentVersion={template.currentVersion}
             customVariables={template.customVariables}
+            draftSubject={form.subjectTemplate}
+            draftHtml={form.htmlBody}
+            draftCustomVariables={form.customVariables}
+            draftContext={form.requiredContext}
             dirty={dirty}
             canSave={dirty && !update.isPending}
             saving={update.isPending}
