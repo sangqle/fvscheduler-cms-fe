@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { MailScreen } from '@/components/admin/mail/MailScreen';
-import Loading from '../loading';
+import Loading from './loading';
 
 export const metadata: Metadata = { title: 'Email hệ thống' };
 

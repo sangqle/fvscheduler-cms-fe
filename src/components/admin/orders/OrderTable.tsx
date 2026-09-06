@@ -5,12 +5,16 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
+import { RawId } from '@/components/admin/shared/RawId';
 import { BILLING_PERIOD, ORDER_STATUS, isOrderPayable } from '@/lib/admin/labels';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import type { PageResponse } from '@/types/api';
 import type { AdminOrderRow } from '@/types/admin';
 
 const columns: ColumnDef<AdminOrderRow>[] = [
+  // Cột đầu tiên như bảng workspace. Đơn hàng khóa theo `orderCode` nên tự nó không có khóa số:
+  // con số ở đây là của workspace, đủ để join sang bảng khác khi đối soát.
+  { id: 'rawId', header: 'rawId', className: 'w-20', cell: (o) => <RawId value={o.workspace.rawId} /> },
   { id: 'code', header: 'Mã đơn', cell: (o) => <span className="font-mono text-xs font-semibold">{o.orderCode}</span> },
   { id: 'ws', header: 'Workspace', className: 'min-w-[12vw]', cell: (o) => <span className="font-medium">{o.workspace.name}</span> },
   {

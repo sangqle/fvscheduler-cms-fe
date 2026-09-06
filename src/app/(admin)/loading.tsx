@@ -1,11 +1,17 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+import { FilterBarSkeleton, PageHeaderSkeleton, TableSkeleton } from '@/components/admin/shared/PageSkeleton';
 
+/**
+ * Khung xương mặc định của khu admin: mọi route đều có `loading.tsx` riêng bám sát bố cục của nó,
+ * file này chỉ đỡ cho route mới chưa kịp có bản riêng.
+ */
 export default function Loading() {
   return (
-    <div className="flex flex-col gap-4">
-      <Skeleton className="h-7 w-56" />
-      <Skeleton className="h-4 w-96 max-w-full" />
-      <Skeleton className="h-64 w-full" />
-    </div>
+    <>
+      <PageHeaderSkeleton actions={1} />
+      <div className="flex flex-col gap-4">
+        <FilterBarSkeleton fields={3} />
+        <TableSkeleton columns={['', '', '', '', '', '']} rows={8} />
+      </div>
+    </>
   );
 }

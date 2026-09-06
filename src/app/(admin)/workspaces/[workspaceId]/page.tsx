@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { WorkspaceDetailScreen } from '@/components/admin/workspaces/WorkspaceDetailScreen';
-import Loading from '../../loading';
+import Loading from './loading';
 
 export const metadata: Metadata = { title: 'Chi tiết workspace' };
 

@@ -31,7 +31,8 @@ Mọi bộ lọc sống trên URL; màn cha đọc URL và truyền `values` xu�
   sort, 4 cột giá; mã `readOnly`; **không** có switch bán (PUT gửi lại `isActive` đã lưu).
 - Menu hàng: Sửa tên và giá · Sửa thành phần · Mở bán / Ngừng bán · Xóa gói vĩnh viễn.
 - Hỏi lại trước khi: ngừng bán gói còn tham chiếu, và mở bán gói chưa có limit nào.
-- Bấm vào hàng mở `/plans/{code}`.
+- Bấm vào hàng mở `/plans/{code}?from=<query hiện tại đã encode>` (`detailHref`); nút quay lại ở
+  chi tiết đọc `?from=` bằng `useReturnHref('/plans')` nên về đúng tab và bộ lọc đang xem.
 
 **Tab Nhóm & item** → `ItemFilters` + `ItemsTab`. URL: `?itemQ=&group=<groupCode>&itemStatus=active|inactive`
 (khóa tách riêng với tab Gói để chuyển tab không mất bộ lọc). Dropdown Nhóm liệt kê mọi nhóm kèm
@@ -60,7 +61,8 @@ chỉ bật khi dirty) · thẻ Trạng thái bán (`Switch` riêng, gửi giá 
 limits (`SegmentedControl` 3 chế độ: Số · ∞ Không giới hạn · Không mang) · thẻ "Kết quả sau khi lưu"
 dựng lại phía client bằng `resolvePreview` · thanh chân trang sticky (`Hoàn tác` / `Lưu thành phần`).
 
-Trạng thái mọi màn: loading = `Skeleton` / `DataTable isLoading` · empty = `EmptyState` · error =
+Trạng thái mọi màn: loading = khung xương khớp bố cục (`loading.tsx` của route + nhánh `isPending`
+dùng chung component ở `*Skeletons.tsx`, xem [README](./README.md)) · empty = `EmptyState` · error =
 `ErrorState` · 404 = `NotFoundState` · pending khi ghi = nút disabled + `Spinner`.
 
 ## Hooks ↔ API

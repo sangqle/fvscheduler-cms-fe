@@ -1,6 +1,6 @@
 # Workspaces
 
-Updated: 2026-09-05 · Thiết kế: CMS-01..04, CMS-08 · Backend: `ADM-FLOW-02, 03, 05, 06`
+Updated: 2026-09-06 · Thiết kế: CMS-01..04, CMS-08 · Backend: `ADM-FLOW-02, 03, 05, 06`
 
 ## Mục đích
 
@@ -16,13 +16,16 @@ thực hiện 3 thao tác ghi: cấp gói / trial, gia hạn, hủy gói. Thành
   "không có thao tác ghi" đẩy sát phải. Sắp xếp là `WorkspaceSortControl` trong `PageHeader actions`.
 - URL: `?q=&type=&subscriptionStatus=&planCode=&sort=createdAt,desc|name,asc&page=&size=15`
   (`useUrlState`; đổi filter reset `page`). Ô tìm debounce 300ms.
-- Cột: Workspace (tên, loại, id ngắn) · Chủ sở hữu (tên, email hoặc "Chưa có tài khoản đăng
+- Cột: `rawId` (khóa số của `workspace.id`, `RawId`, luôn đứng đầu) · Workspace (tên, loại, id
+  ngắn) · Chủ sở hữu (tên, email hoặc "Chưa có tài khoản đăng
   nhập") · TV · CN · Gói hiện tại (tên + badge nguồn + mã, hoặc "Chưa từng có gói") · Trạng thái ·
   Hết hạn (giờ + "còn/quá N ngày", đỏ khi quá, cam ≤ 7 ngày) · Tạo lúc.
-- Click hàng → `/workspaces/{id}`. Rỗng sau lọc → `EmptyState` + "Xóa bộ lọc" (ghi chú PAST_DUE).
+- Click hàng → `/workspaces/{id}?from=<query hiện tại đã encode>` (`detailHref`), để nút quay lại ở
+  chi tiết trả đúng trang/bộ lọc đang xem. Rỗng sau lọc → `EmptyState` + "Xóa bộ lọc" (ghi chú PAST_DUE).
 
 ### `/workspaces/[workspaceId]` (CMS-02..04)
-- `WorkspaceDetailScreen`: header (back, tên, loại, badge trạng thái, id copy, tạo lúc, chủ sở
+- `WorkspaceDetailScreen`: header (back về `useReturnHref('/workspaces')`, tức `?from=` nếu vào từ
+  danh sách, còn không thì `/workspaces` trơn; tên, loại, badge trạng thái, id copy, tạo lúc, chủ sở
   hữu, nút "Xem đơn hàng của workspace" → `/orders?workspaceId=`), Tabs qua `?tab=overview|members|history`.
 - 404 → `NotFoundState` ("Không tìm thấy workspace này", không tiết lộ id).
 - **Tổng quan** `OverviewTab`: thẻ Gói hiện tại (tên, badge status/source, mã + giá từ catalog,
@@ -44,6 +47,10 @@ thực hiện 3 thao tác ghi: cấp gói / trial, gia hạn, hủy gói. Thành
   là focus mặc định.
 - Focus mặc định luôn ở nút Hủy; lỗi 4xx hiện `Alert` trong dialog với message backend; thành
   công → toast + đóng + invalidate.
+
+Trạng thái mọi màn: loading = khung xương khớp bố cục (`loading.tsx` của route + nhánh `isPending`
+dùng chung component ở `WorkspaceSkeletons.tsx`, xem [README](./README.md)) · empty = `EmptyState` · error =
+`ErrorState` · 404 = `NotFoundState` · pending khi ghi = nút disabled + `Spinner`.
 
 ## Hooks ↔ API
 
@@ -67,6 +74,8 @@ Invalidate `detail(id)` cũng bắt lịch sử/thành viên vì key lồng dư�
 - Extend/Cancel chỉ có nghĩa khi có dòng live; nút disabled khi `status === 'NONE'`.
 - Không có endpoint ghi override, không mời/vô hiệu thành viên từ CMS.
 - Sort chỉ `createdAt` hoặc `name`; membership sort chỉ `createdAt`/`status`.
+- `?from=` chỉ là bộ nhớ đường về, không phải state của màn chi tiết: đọc bằng `useReturnHref`,
+  không parse ra để lọc gì thêm; vào thẳng bằng link ngoài (không có `from`) vẫn phải chạy đúng.
 
 ## Types
 

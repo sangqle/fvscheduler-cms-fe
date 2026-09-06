@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { History, Mail, Megaphone, MoreHorizontal, Pencil, Power, SearchX, Send } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
@@ -25,6 +25,7 @@ import { CategoryBadge, ContextChips, TemplateFlags, VersionChip } from '@/compo
 import { CreateCampaignDialog } from '@/components/admin/mail/CreateCampaignDialog';
 import { TestSendDialog } from '@/components/admin/mail/TestSendDialog';
 import { useMailTemplates, useSetMailTemplateActive } from '@/hooks/useAdminMail';
+import { detailHref } from '@/hooks/useUrlState';
 import { apiErrorMessage } from '@/lib/api/auth';
 import { isSendableTemplate, isTestSendable } from '@/lib/admin/labels';
 import { formatDateTime } from '@/lib/utils';
@@ -58,6 +59,7 @@ export function TemplateTable({
   onClearFilters: () => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
 
   const { data, isPending, error, refetch } = useMailTemplates({
@@ -244,7 +246,7 @@ export function TemplateTable({
         isLoading={isPending}
         skeletonRows={6}
         mobileCards
-        onRowClick={(t) => router.push(`/mail/templates/${t.code}`)}
+        onRowClick={(t) => router.push(detailHref(`/mail/templates/${t.code}`, searchParams))}
         rowClassName={(t) => (t.active ? undefined : 'opacity-70')}
         emptyContent={
           filtered ? (

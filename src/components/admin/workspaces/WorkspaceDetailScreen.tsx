@@ -4,16 +4,16 @@ import Link from 'next/link';
 import { ArrowLeft, Copy, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { useToast } from '@/components/ui/ToastProvider';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { ErrorState, NotFoundState, isNotFound } from '@/components/admin/shared/QueryState';
+import { WorkspaceDetailSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { OverviewTab } from '@/components/admin/workspaces/OverviewTab';
 import { MembersTab } from '@/components/admin/workspaces/MembersTab';
 import { HistoryTab } from '@/components/admin/workspaces/HistoryTab';
 import { useAdminWorkspace } from '@/hooks/useAdminWorkspaces';
-import { useUrlState } from '@/hooks/useUrlState';
+import { useReturnHref, useUrlState } from '@/hooks/useUrlState';
 import { SUBSCRIPTION_STATUS, WORKSPACE_TYPE } from '@/lib/admin/labels';
 import { formatDateTime, shortId } from '@/lib/utils';
 
@@ -23,26 +23,19 @@ type Tab = (typeof TABS)[number];
 /** CMS-02..04: chi tiết workspace, tab sống trên `?tab=`. */
 export function WorkspaceDetailScreen({ workspaceId }: { workspaceId: string }) {
   const { get, set } = useUrlState();
+  const backHref = useReturnHref('/workspaces');
   const { showToast } = useToast();
   const tab: Tab = TABS.includes(get('tab') as Tab) ? (get('tab') as Tab) : 'overview';
   const query = useAdminWorkspace(workspaceId);
 
-  if (query.isPending) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-4 w-96 max-w-full" />
-        <Skeleton className="h-72 w-full" />
-      </div>
-    );
-  }
+  if (query.isPending) return <WorkspaceDetailSkeleton />;
   if (query.error) {
     if (isNotFound(query.error)) {
       return (
         <NotFoundState
           title="Không tìm thấy workspace này"
           description={`${shortId(workspaceId)} không tồn tại hoặc đã bị xóa. Backend luôn trả cùng một thông điệp, không tiết lộ id.`}
-          backHref="/workspaces"
+          backHref={backHref}
           backLabel="Về danh sách workspace"
         />
       );
@@ -65,7 +58,7 @@ export function WorkspaceDetailScreen({ workspaceId }: { workspaceId: string }) 
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Button variant="link" size="sm" className="self-start" asChild>
-          <Link href="/workspaces">
+          <Link href={backHref}>
             <ArrowLeft className="size-4" />
             Danh sách workspace
           </Link>

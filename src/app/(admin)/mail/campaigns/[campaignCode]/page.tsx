@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { CampaignDetailScreen } from '@/components/admin/mail/CampaignDetailScreen';
-import Loading from '../../../loading';
+import Loading from './loading';
 
 export const metadata: Metadata = { title: 'Chi tiết chiến dịch' };
 

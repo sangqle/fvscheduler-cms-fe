@@ -14,6 +14,8 @@ Updated: 2026-09-05 · Thiết kế: CMS-05, 06, 08 · Backend: `ADM-FLOW-07-rec
   (phân trang server, size 12).
 - URL: `?status=&q=&workspaceId=&page=&size=&code=`. `workspaceId` chỉ là query filter; khi có,
   hiện dòng "Đang lọc theo workspace <tên>" + nút bỏ lọc.
+- Cột đầu tiên là `rawId`, khóa số **của workspace**: đơn hàng khóa theo `orderCode` nên tự nó
+  không có id số nào.
 - Hàng PAID/CANCELED mờ đi; cột "Khớp SePay": `tx <id>` · "Xác nhận tay" (PAID không có tx) · "—".
 - Click hàng → `?code=<orderCode>` mở drawer.
 
@@ -31,6 +33,10 @@ Updated: 2026-09-05 · Thiết kế: CMS-05, 06, 08 · Backend: `ADM-FLOW-07-rec
 - Thành công → toast "Đã xác nhận thanh toán, gói đã được kích hoạt" + set cache detail + invalidate
   list đơn và workspaces. 409 → `Alert` giữ nguyên message backend ("Order is PAID, not payable",
   "Plan X is inactive or missing").
+
+Trạng thái mọi màn: loading = khung xương khớp bố cục (`loading.tsx` của route + nhánh `isPending`
+dùng chung component ở `OrderSkeletons.tsx`, xem [README](./README.md)) · empty = `EmptyState` · error =
+`ErrorState` · 404 = `NotFoundState` · pending khi ghi = nút disabled + `Spinner`.
 
 ## Hooks ↔ API
 

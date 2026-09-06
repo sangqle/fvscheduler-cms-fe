@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Megaphone, SearchX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/admin/shared/QueryState';
 import type { CampaignFilterValues } from '@/components/admin/mail/MailFilters';
 import { VersionChip } from '@/components/admin/mail/mailDisplay';
 import { useMailCampaigns } from '@/hooks/useAdminMail';
+import { detailHref } from '@/hooks/useUrlState';
 import { MAIL_CAMPAIGN_STATUS } from '@/lib/admin/labels';
 import { formatDateTime } from '@/lib/utils';
 import type { AdminMailCampaignRow } from '@/types/admin';
@@ -32,6 +33,7 @@ export function CampaignTable({
   onClearFilters: () => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = React.useState(0);
   const [size, setSize] = React.useState(20);
   const query = useMailCampaigns(page, size);
@@ -105,7 +107,7 @@ export function CampaignTable({
         isLoading={query.isPending}
         skeletonRows={6}
         mobileCards
-        onRowClick={(c) => router.push(`/mail/campaigns/${c.campaignCode}`)}
+        onRowClick={(c) => router.push(detailHref(`/mail/campaigns/${c.campaignCode}`, searchParams))}
         rowClassName={(c) => (c.status === 'CANCELED' ? 'opacity-70' : undefined)}
         paginated
         manualPagination

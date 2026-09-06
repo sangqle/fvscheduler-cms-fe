@@ -23,12 +23,12 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Heading } from '@/components/ui/Heading';
 import { NoticeBanner } from '@/components/ui/NoticeBanner';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { Text } from '@/components/ui/Text';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useToast } from '@/components/ui/ToastProvider';
+import { CampaignDetailSkeleton } from '@/components/admin/mail/MailSkeletons';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { ErrorState, NotFoundState, isNotFound } from '@/components/admin/shared/QueryState';
 import { CampaignProgress } from '@/components/admin/mail/CampaignProgress';
@@ -36,6 +36,7 @@ import { MessageFilters, type MessageFilterValues } from '@/components/admin/mai
 import { MessageTable } from '@/components/admin/mail/MessageTable';
 import { VersionChip } from '@/components/admin/mail/mailDisplay';
 import { useCampaignAction, useMailCampaign } from '@/hooks/useAdminMail';
+import { useReturnHref } from '@/hooks/useUrlState';
 import { apiErrorMessage } from '@/lib/api/auth';
 import { MAIL_CAMPAIGN_STATUS } from '@/lib/admin/labels';
 import { isCampaignLive } from '@/lib/admin/mail';
@@ -60,6 +61,7 @@ function clockTime(ts: number): string {
 /** CMS-13: theo dõi tiến độ một chiến dịch, hủy phần chưa gửi, xếp lại phần lỗi. */
 export function CampaignDetailScreen({ campaignCode }: { campaignCode: string }) {
   const { showToast } = useToast();
+  const backHref = useReturnHref(CAMPAIGNS_HREF);
   const query = useMailCampaign(campaignCode);
   const action = useCampaignAction(campaignCode);
   const queryClient = useQueryClient();
@@ -69,23 +71,14 @@ export function CampaignDetailScreen({ campaignCode }: { campaignCode: string })
   const [dialog, setDialog] = React.useState<'cancel' | 'retry' | null>(null);
   const [messageFilters, setMessageFilters] = React.useState<MessageFilterValues>(NO_MESSAGE_FILTERS);
 
-  if (query.isPending) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-8 w-80 max-w-full" />
-        <Skeleton className="h-4 w-96 max-w-full" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </div>
-    );
-  }
+  if (query.isPending) return <CampaignDetailSkeleton />;
   if (query.error) {
     if (isNotFound(query.error)) {
       return (
         <NotFoundState
           title="Không có chiến dịch này"
           description={`Mã ${campaignCode} không có trong hệ thống. Mã chiến dịch do backend sinh lúc tạo và không đổi được.`}
-          backHref={CAMPAIGNS_HREF}
+          backHref={backHref}
           backLabel="Về danh sách chiến dịch"
         />
       );
@@ -155,7 +148,7 @@ export function CampaignDetailScreen({ campaignCode }: { campaignCode: string })
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Button variant="link" size="sm" className="self-start" asChild>
-          <Link href={CAMPAIGNS_HREF}>
+          <Link href={backHref}>
             <ArrowLeft className="size-4" />
             Chiến dịch
           </Link>

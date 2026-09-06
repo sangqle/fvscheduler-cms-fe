@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Layers, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -32,6 +32,7 @@ import {
   referenceCount,
 } from '@/components/admin/plans/planDisplay';
 import { useAdminPlans, useUpdatePlan } from '@/hooks/useAdminPlans';
+import { detailHref } from '@/hooks/useUrlState';
 import { apiErrorMessage } from '@/lib/api/auth';
 import type { AdminPlan, UpdatePlanInput } from '@/types/admin';
 
@@ -76,6 +77,7 @@ export function PlanTable({
   onCreateOpenChange: (o: boolean) => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const { data, isPending, error, refetch } = useAdminPlans();
   const update = useUpdatePlan();
@@ -273,7 +275,7 @@ export function PlanTable({
         isLoading={isPending}
         skeletonRows={8}
         mobileCards
-        onRowClick={(p) => router.push(`/plans/${p.code}`)}
+        onRowClick={(p) => router.push(detailHref(`/plans/${p.code}`, searchParams))}
         rowClassName={(p) => (p.isActive ? undefined : 'opacity-70')}
         emptyContent={
           filtered ? undefined : (

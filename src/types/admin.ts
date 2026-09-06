@@ -22,9 +22,13 @@ export type MembershipStatus = 'invited' | 'active' | 'disabled';
 
 export interface AdminWorkspaceOwner {
   membershipId: string;
+  /** Khóa số của membership, chỉ có trên `/api/admin/**`; xem `RawId`. */
+  rawMembershipId: number;
   displayName: string;
   /** null khi chủ sở hữu chưa có tài khoản đăng nhập. */
   accountId: string | null;
+  /** null cùng lúc với `accountId`. */
+  rawAccountId: number | null;
   email: string | null;
 }
 
@@ -45,6 +49,8 @@ export interface AdminSubscriptionSummary {
 /** GET /api/admin/workspaces → PageResponse<AdminWorkspaceRow> */
 export interface AdminWorkspaceRow {
   id: string;
+  /** Khóa số của `workspace.id`, chỉ có trên `/api/admin/**`; xem `RawId`. */
+  rawId: number;
   name: string;
   type: WorkspaceType;
   createdAt: string;
@@ -328,7 +334,7 @@ export interface AdminLimitKey {
 
 export interface AdminOrderRow {
   orderCode: string;
-  workspace: { id: string; name: string };
+  workspace: { id: string; rawId: number; name: string };
   planCode: string;
   planName: string;
   billingPeriod: BillingPeriod;

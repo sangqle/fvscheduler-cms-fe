@@ -29,7 +29,8 @@ cho nhật ký, nên chuyển tab không làm mất bộ lọc của tab kia.
   `ContextChips` (`requiredContext`, ẩn `COMMON`), `VersionChip` (`v{currentVersion}`), `Switch`
   bật/tắt ghi thẳng `PATCH .../active`, **không hỏi lại**: tắt chỉ chặn tạo chiến dịch mới và bật
   lại là một cú bấm, dialog xác nhận để dành cho thao tác không lùi được. Nút "Tạo template" mở `TemplateFormDialog`; tạo xong
-  chuyển thẳng sang `/mail/templates/{code}`. Bấm hàng mở trang chi tiết.
+  chuyển thẳng sang `/mail/templates/{code}`. Bấm hàng mở trang chi tiết, kèm `?from=<query hiện
+  tại đã encode>` (`detailHref`) để nút quay lại về đúng tab và bộ lọc, thay vì `/mail` trơn.
 - **Tab Chiến dịch** → `CampaignTable` (props `values`, `onCreate`, `onClearFilters`). Lọc trạng
   thái chạy **tại client trên trang đang xem** vì endpoint không nhận bộ lọc nào. Nút "Tạo chiến dịch" mở
   `CreateCampaignDialog` (nhận `initialTemplateCode` khi mở từ trang template). Bấm hàng mở
@@ -103,7 +104,8 @@ hai nút kia giữa lúc đang gõ.
   hover.
 
 ### `/mail/campaigns/[campaignCode]`
-`CampaignDetailScreen` (prop `campaignCode`) · header tên chiến dịch, `templateCode` +
+`CampaignDetailScreen` (prop `campaignCode`) · nút quay lại dùng `useReturnHref('/mail?tab=campaigns')`
+(khôi phục bộ lọc đã ghim ở `?from=`) · header tên chiến dịch, `templateCode` +
 `templateVersion` ghim lúc tạo (không đổi dù template gốc được sửa sau), badge trạng thái · 5 số
 đếm pending/sending/sent/failed/canceled (tổng luôn bằng `total`) · nút Hủy (chỉ PENDING bị hủy,
 SENDING vẫn gửi tiếp; hủy chiến dịch DONE hợp lệ, trả `affected: 0`) và Gửi lại (FAILED → PENDING,
@@ -111,7 +113,8 @@ SENDING vẫn gửi tiếp; hủy chiến dịch DONE hợp lệ, trả `affecte
 hideCampaignColumn` bên dưới. Hủy chỉ bị chặn khi `status === 'CANCELED'`: hủy một chiến dịch
 `DONE` là hợp lệ và trả `affected: 0`, nên nút không tắt theo `pending === 0`.
 
-Trạng thái mọi màn: loading = `Skeleton` / `DataTable isLoading` · empty = `EmptyState` · error =
+Trạng thái mọi màn: loading = khung xương khớp bố cục (`loading.tsx` của route + nhánh `isPending`
+dùng chung component ở `*Skeletons.tsx`, xem [README](./README.md)) · empty = `EmptyState` · error =
 `ErrorState` · 404 = `NotFoundState` · pending khi ghi = nút disabled + `Spinner`.
 
 ## Hooks ↔ API

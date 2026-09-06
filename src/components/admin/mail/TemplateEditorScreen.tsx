@@ -11,13 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Heading } from '@/components/ui/Heading';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { Spinner } from '@/components/ui/Spinner';
 import { Text } from '@/components/ui/Text';
 import { CodeEditor, type CodeEditorHandle } from '@/components/ui/CodeEditor';
 import { Textarea } from '@/components/ui/Textarea';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useToast } from '@/components/ui/ToastProvider';
+import { TemplateEditorSkeleton } from '@/components/admin/mail/MailSkeletons';
 import { Field } from '@/components/admin/shared/Field';
 import { ErrorState, NotFoundState, isNotFound } from '@/components/admin/shared/QueryState';
 import { ChipListEditor, ToggleChip } from '@/components/admin/mail/ChipListEditor';
@@ -30,7 +30,7 @@ import { VersionConflictDialog } from '@/components/admin/mail/VersionConflictDi
 import { VersionHistory } from '@/components/admin/mail/VersionHistory';
 import { mailKeys, useMailTemplate, useUpdateMailTemplate } from '@/hooks/useAdminMail';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useUrlState } from '@/hooks/useUrlState';
+import { useReturnHref, useUrlState } from '@/hooks/useUrlState';
 import { apiErrorMessage } from '@/lib/api/auth';
 import { MAIL_CATEGORY_OPTIONS, MAIL_CONTEXT_GROUPS, isSendableTemplate } from '@/lib/admin/labels';
 import {
@@ -105,6 +105,7 @@ export function TemplateEditorScreen({ code }: { code: string }) {
   const query = useMailTemplate(code);
   const update = useUpdateMailTemplate();
   const { get, set } = useUrlState();
+  const backHref = useReturnHref('/mail');
   /**
    * "Chia đôi" chỉ có nghĩa từ `xl`: ở đúng 1024px hai cột còn ~364px mỗi bên, hẹp hơn cả cột thư
    * 600px mà khung xem trước dựng quanh. `useMediaQuery` trả `false` ở server và ở lần render đầu
@@ -145,7 +146,7 @@ export function TemplateEditorScreen({ code }: { code: string }) {
         <NotFoundState
           title="Không tìm thấy template này"
           description={`Mã ${code} không có trong danh sách. Mã template phân biệt hoa thường và không đổi được sau khi tạo.`}
-          backHref="/mail"
+          backHref={backHref}
           backLabel="Về email hệ thống"
         />
       );
@@ -153,15 +154,7 @@ export function TemplateEditorScreen({ code }: { code: string }) {
     return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   }
 
-  if (!template || !form) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-4 w-96 max-w-full" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
+  if (!template || !form) return <TemplateEditorSkeleton />;
 
   const nextVersion = template.currentVersion + 1;
   const partial = form.category === 'PARTIAL';
@@ -366,7 +359,7 @@ export function TemplateEditorScreen({ code }: { code: string }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Button variant="link" size="sm" className="self-start" asChild>
-          <Link href="/mail">
+          <Link href={backHref}>
             <ArrowLeft className="size-4" />
             Email hệ thống
           </Link>

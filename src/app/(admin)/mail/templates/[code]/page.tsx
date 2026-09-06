@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { TemplateEditorScreen } from '@/components/admin/mail/TemplateEditorScreen';
-import Loading from '../../../loading';
+import Loading from './loading';
 
 export const metadata: Metadata = { title: 'Soạn template' };
 

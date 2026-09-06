@@ -1,11 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SearchX, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
+import { RawId } from '@/components/admin/shared/RawId';
+import { detailHref } from '@/hooks/useUrlState';
 import { SUBSCRIPTION_SOURCE, SUBSCRIPTION_STATUS, WORKSPACE_TYPE } from '@/lib/admin/labels';
 import { expiryTone, relativeDays } from '@/lib/admin/time';
 import { cn, formatDate, formatDateTime, shortId } from '@/lib/utils';
@@ -25,6 +27,8 @@ export function ExpiryCell({ iso }: { iso: string | null }) {
 }
 
 const columns: ColumnDef<AdminWorkspaceRow>[] = [
+  // Cột đầu tiên: người vận hành đọc thẳng DB nền tảng nên khóa số là thứ họ quét mắt trước nhất.
+  { id: 'rawId', header: 'rawId', className: 'w-20', cell: (w) => <RawId value={w.rawId} /> },
   {
     id: 'name',
     header: 'Workspace',
@@ -98,6 +102,7 @@ export function WorkspaceTable({
   onClearFilters: () => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   return (
     <DataTable
       columns={columns}
@@ -105,7 +110,7 @@ export function WorkspaceTable({
       rowKey={(w) => w.id}
       isLoading={isLoading}
       skeletonRows={8}
-      onRowClick={(w) => router.push(`/workspaces/${w.id}`)}
+      onRowClick={(w) => router.push(detailHref(`/workspaces/${w.id}`, searchParams))}
       paginated
       manualPagination
       pageIndex={pageIndex}
