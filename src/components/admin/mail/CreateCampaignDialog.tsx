@@ -57,6 +57,13 @@ type Step = 1 | 2 | 3;
 const ID_TAG: Record<Mode, string> = { workspace: 'wk', account: 'ac' };
 const ID_LENGTH = 16;
 
+/**
+ * Workspace nhận thêm id dạng SỐ THÔ, để admin dán thẳng kết quả một truy vấn SQL mà không phải mã
+ * hóa từng dòng. Chặn ở 15 chữ số vì trên ngưỡng đó `Number` mất chính xác và id sẽ sai lặng lẽ.
+ * Tài khoản không có đường này: backend chỉ mở raw cho workspace.
+ */
+const RAW_ID = /^\d{1,15}$/;
+
 /** 422 của `variables` gắn vào bước 3; các lỗi khác vẫn ở khối lỗi chung đầu dialog. */
 const VARIABLE_PROBLEM = /^(missing|unknown) variable: /;
 
@@ -142,9 +149,18 @@ export function CreateCampaignDialog({
   );
 
   const ids = parseIdList(rawIds[mode]);
+  const numericIds = mode === 'workspace' ? ids.filter((id) => RAW_ID.test(id)) : [];
+  const opaqueIds = ids.filter((id) => !numericIds.includes(id));
   // Chỉ soi tag và độ dài, không soi bảng chữ base32: đây là gợi ý cho người dán nhầm cột id, không
   // phải bản sao của bộ giải mã phía backend, chặt hơn backend là chặn nhầm id hợp lệ.
-  const malformed = ids.filter((id) => id.length !== ID_LENGTH || !id.toLowerCase().startsWith(ID_TAG[mode]));
+  const malformed = opaqueIds.filter(
+    (id) => id.length !== ID_LENGTH || !id.toLowerCase().startsWith(ID_TAG[mode]),
+  );
+  // Trộn hai dạng là ca nguy hiểm nhất: backend thấy `rawWorkspaceIds` khác rỗng là dùng nó và bỏ
+  // hẳn `workspaceIds`, nên nửa id mờ biến mất không một lời báo. Chặn tại đây thay vì để người
+  // dùng đọc con số người nhận rồi tự đoán vì sao thiếu.
+  const mixedIdForms = numericIds.length > 0 && opaqueIds.length > 0;
+  const useRawIds = numericIds.length > 0 && !mixedIdForms;
   const missing = missingVariables(custom, variables);
 
   const variableProblems = problems.filter((p) => VARIABLE_PROBLEM.test(p));
@@ -156,7 +172,7 @@ export function CreateCampaignDialog({
 
   const done: Record<Step, boolean> = {
     1: Boolean(templateCode && name.trim() && detail.data && !notSendable),
-    2: ids.length > 0 && malformed.length === 0,
+    2: ids.length > 0 && malformed.length === 0 && !mixedIdForms,
     3: missing.length === 0,
   };
 
@@ -178,7 +194,8 @@ export function CreateCampaignDialog({
     return {
       templateCode,
       name: name.trim(),
-      workspaceIds: mode === 'workspace' ? ids : undefined,
+      workspaceIds: mode === 'workspace' && !useRawIds ? ids : undefined,
+      rawWorkspaceIds: useRawIds ? numericIds.map(Number) : undefined,
       accountIds: mode === 'account' ? ids : undefined,
       variables: campaignVariables(custom, variables),
       dryRun: dry,
@@ -406,7 +423,11 @@ export function CreateCampaignDialog({
                     {ids.length} id
                   </Badge>
                 }
-                hint={`Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Id bắt đầu bằng ${ID_TAG[mode]} và dài ${ID_LENGTH} ký tự.`}
+                hint={
+                  mode === 'workspace'
+                    ? `Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Nhận id mờ (bắt đầu bằng ${ID_TAG.workspace}, dài ${ID_LENGTH} ký tự) hoặc id số thô dán từ truy vấn SQL, nhưng cả danh sách phải cùng một dạng.`
+                    : `Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Id bắt đầu bằng ${ID_TAG.account} và dài ${ID_LENGTH} ký tự.`
+                }
               >
                 <div className="flex flex-col gap-2">
                   <Textarea
@@ -416,12 +437,29 @@ export function CreateCampaignDialog({
                     onChange={(e) => setRawIds((prev) => ({ ...prev, [mode]: e.target.value }))}
                     placeholder={
                       mode === 'workspace'
-                        ? 'wk8AA109MXP1XRBY\nwkNN0TC1ZMG8NMMP'
+                        ? 'wk8AA109MXP1XRBY\nwkNN0TC1ZMG8NMMP\n\nhoặc id số: 128\n129'
                         : 'ac8AA109MXP1XRBY\nacNN0TC1ZMG8NMMP'
                     }
-                    error={malformed.length > 0}
+                    error={malformed.length > 0 || mixedIdForms}
                     className="font-mono"
                   />
+                  {mixedIdForms && (
+                    <Alert variant="warning">
+                      <AlertDescription>
+                        Danh sách đang trộn {numericIds.length} id số và {opaqueIds.length} id mờ.
+                        Backend chỉ nhận một dạng cho mỗi lần gửi: nếu có id số thì id mờ bị bỏ qua
+                        hoàn toàn. Giữ lại một dạng rồi chạy thử lại.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {useRawIds && (
+                    <Alert variant="info">
+                      <AlertDescription>
+                        Đang gửi theo {numericIds.length} id số thô. Id số không đọc được bằng mắt
+                        nên hãy chạy thử và đối chiếu số người nhận trước khi gửi thật.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   {malformed.length > 0 && (
                     <Alert variant="warning">
                       <AlertDescription className="flex flex-col gap-1">

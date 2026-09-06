@@ -476,11 +476,19 @@ export interface AdminMailCampaignDetail extends AdminMailCampaignRow {
   canceled: number;
 }
 
-/** POST /api/admin/mail/campaigns: đúng một trong `workspaceIds` / `accountIds`, khác đi là 400. */
+/**
+ * POST /api/admin/mail/campaigns: đúng một trong nhắm-workspace (`workspaceIds` hoặc
+ * `rawWorkspaceIds`) và `accountIds`, khác đi là 400.
+ */
 export interface CreateCampaignInput {
   templateCode: string;
   name: string;
   workspaceIds?: string[];
+  /**
+   * Id workspace dạng số thô, dán thẳng từ một truy vấn SQL. Khác rỗng thì backend dùng nó và
+   * BỎ QUA `workspaceIds`, không gộp hai danh sách. Chỉ gửi một trong hai.
+   */
+  rawWorkspaceIds?: number[];
   accountIds?: string[];
   variables?: Record<string, string>;
   /** true = chỉ đếm người nhận, không chèn dòng nào. */
