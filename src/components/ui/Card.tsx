@@ -21,7 +21,8 @@ export type CardPadding = 'md' | 'sm';
  */
 const CardPaddingContext = React.createContext<CardPadding>('md');
 
-const HEADER_PADDING: Record<CardPadding, string> = {
+/** Đệm đủ bốn phía: khối mở đầu thẻ, tức `CardHeader` hoặc một `CardContent` khai `standalone`. */
+const FULL_PADDING: Record<CardPadding, string> = {
   md: 'p-4 sm:p-6',
   sm: 'p-4',
 };
@@ -42,6 +43,15 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 /** Prop chung của ba khối con: bỏ trống `padding` thì lấy theo `Card` cha. */
 export interface CardSectionProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: CardPadding;
+}
+
+/** Prop của hai khối nằm dưới header. */
+export interface CardBodyProps extends CardSectionProps {
+  /**
+   * Khối này mở đầu thẻ chứ không nằm dưới `CardHeader`, nên nhận lại đệm trên mà mặc định đã cắt.
+   * Thẻ chỉ có mỗi `CardContent` thì để mặc định là chữ dính sát viền trên.
+   */
+  standalone?: boolean;
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -68,7 +78,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardSectionProps>(
     return (
       <div
         ref={ref}
-        className={cn('flex flex-col gap-1.5', HEADER_PADDING[padding ?? inherited], className)}
+        className={cn('flex flex-col gap-1.5', FULL_PADDING[padding ?? inherited], className)}
         {...props}
       />
     );
@@ -90,8 +100,10 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, CardTitleProps>(
     <h3
       ref={ref}
       className={cn(
-        'font-bold leading-none tracking-tight',
+        // Cỡ chữ phải đứng TRƯỚC `leading-none`: `text-*` của Tailwind gói sẵn cả line-height, nên
+        // tailwind-merge coi nó xung đột với `leading-*` và xoá mọi `leading-*` đứng trước nó.
         size === 'lg' ? 'text-lg' : 'text-base',
+        'font-bold leading-none tracking-tight',
         className,
       )}
       {...props}
@@ -108,21 +120,23 @@ const CardDescription = React.forwardRef<
 ));
 CardDescription.displayName = 'CardDescription';
 
-const CardContent = React.forwardRef<HTMLDivElement, CardSectionProps>(
-  ({ className, padding, ...props }, ref) => {
+const CardContent = React.forwardRef<HTMLDivElement, CardBodyProps>(
+  ({ className, padding, standalone, ...props }, ref) => {
     const inherited = React.useContext(CardPaddingContext);
-    return <div ref={ref} className={cn(BODY_PADDING[padding ?? inherited], className)} {...props} />;
+    const scale = standalone ? FULL_PADDING : BODY_PADDING;
+    return <div ref={ref} className={cn(scale[padding ?? inherited], className)} {...props} />;
   },
 );
 CardContent.displayName = 'CardContent';
 
-const CardFooter = React.forwardRef<HTMLDivElement, CardSectionProps>(
-  ({ className, padding, ...props }, ref) => {
+const CardFooter = React.forwardRef<HTMLDivElement, CardBodyProps>(
+  ({ className, padding, standalone, ...props }, ref) => {
     const inherited = React.useContext(CardPaddingContext);
+    const scale = standalone ? FULL_PADDING : BODY_PADDING;
     return (
       <div
         ref={ref}
-        className={cn('flex items-center', BODY_PADDING[padding ?? inherited], className)}
+        className={cn('flex items-center', scale[padding ?? inherited], className)}
         {...props}
       />
     );

@@ -229,7 +229,7 @@ export function CampaignDetailScreen({ campaignCode }: { campaignCode: string })
       />
 
       <Card>
-        <CardContent className="flex flex-col gap-4 p-4 sm:p-6">
+        <CardContent standalone className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Heading level="4">Tiến độ</Heading>
