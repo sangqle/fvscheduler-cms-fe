@@ -1,6 +1,6 @@
 # Catalog gói
 
-Updated: 2026-09-05 · Thiết kế: CMS-07 · Backend: `ADM-FLOW-04-read-catalog`, `ADM-FLOW-08-manage-plans`,
+Updated: 2026-09-06 · Thiết kế: CMS-07 · Backend: `ADM-FLOW-04-read-catalog`, `ADM-FLOW-08-manage-plans`,
 `ADM-FLOW-09-compose-pack`, `ADM-FLOW-10-manage-items`
 
 ## Mục đích
@@ -10,30 +10,42 @@ gói (nhóm, ghi đè item, limits), và tạo / sửa / bật tắt / xóa item
 cache gói và cache trang giá công khai.
 
 **Không có**: CRUD nhóm (`item_group` chỉ tạo được ở backend), thêm feature key / limit key mới
-(hai từ vựng đóng), đổi mã gói hoặc mã item sau khi tạo, audit log riêng.
+(hai danh sách khóa cố định trong code backend), đổi mã gói hoặc mã item sau khi tạo, audit log riêng.
 
 ## Màn hình
 
 ### `/plans` (CMS-07)
 `components/admin/plans/PlanCatalogScreen.tsx` · ba tab sống trên `?tab=` (`plans` mặc định, `items`,
-`vocabulary`); nút hành động ở `PageHeader` đổi theo tab (Tạo gói / Tạo item).
+`keys`); slot `actions` của `PageHeader` đổi theo tab (sắp xếp gói + Tạo gói / Tạo item).
+Hàng lọc của hai tab (`CatalogFilters.tsx`) cùng khuôn với `/workspaces`: ô tìm co giãn, dropdown
+`FilterSelect` rộng theo nội dung, nút "Xóa bộ lọc" chỉ hiện khi đang lọc, ghi chú số đếm sát phải.
+Mọi bộ lọc sống trên URL; màn cha đọc URL và truyền `values` xuống bảng.
 
-**Tab Gói** → `PlanTable`. Filter/URL: `?q=&status=active|inactive&sort=sort|code|price` (lọc và sắp
-xếp phía client trên danh sách đã tải).
-- Cột: Gói (tên + mã + chip `Gói trial` / `Nháp`) · Bán (`Switch` ghi thẳng) · Giá tháng · Giá năm ·
-  Limits (chip mỗi khóa) · Thành phần (link sang tab Thành phần) · Đang dùng (`N sub · M đơn` +
-  "xóa được" / "không xóa được") · menu `⋯`.
-- Menu hàng: Sửa thông tin gói · Sửa thành phần · Mở bán / Ngừng bán · Xóa gói vĩnh viễn.
+**Tab Gói** → `PlanFilters` + `PlanTable`. URL: `?q=&status=active|inactive&sort=sort|code|price`
+(lọc và sắp xếp phía client trên danh sách đã tải). Sắp xếp là `SegmentedControl` cạnh tiêu đề
+(Thứ tự trang giá · Mã gói · Giá năm), không nằm trong hàng lọc.
+- Cột: Gói (tên + chip `Gói trial` / `Nháp` + nút bút chì, mã mono) · Bán (`Switch` ghi thẳng) ·
+  Giá tháng · Giá năm · Limits (chip mỗi khóa) · Sort · Thành phần (link sang tab Thành phần) ·
+  Đang dùng (`N sub · M đơn` + "xóa được" / "không xóa được") · menu `⋯`.
+- Nút bút chì và mục "Sửa tên và giá" mở `PlanFormDialog` ở chế độ sửa ngay trên danh sách: tên,
+  sort, 4 cột giá; mã `readOnly`; **không** có switch bán (PUT gửi lại `isActive` đã lưu).
+- Menu hàng: Sửa tên và giá · Sửa thành phần · Mở bán / Ngừng bán · Xóa gói vĩnh viễn.
 - Hỏi lại trước khi: ngừng bán gói còn tham chiếu, và mở bán gói chưa có limit nào.
 - Bấm vào hàng mở `/plans/{code}`.
 
-**Tab Nhóm & item** → `ItemsTab`. Filter/URL: `?group=<groupCode>&itemQ=`.
-- Rail trái: danh sách nhóm kèm số item (chỉ đọc). Bảng phải: Item · Nhóm · Feature key (kèm cảnh
-  báo "Item duy nhất mang khóa") · Nhãn phụ · Bật (`Switch`) · Sort · Đang dùng (`N link · M ghi đè`)
-  · menu `⋯` (Sửa item · Bật/Tắt · Xóa item vĩnh viễn).
+**Tab Nhóm & item** → `ItemFilters` + `ItemsTab`. URL: `?itemQ=&group=<groupCode>&itemStatus=active|inactive`
+(khóa tách riêng với tab Gói để chuyển tab không mất bộ lọc). Dropdown Nhóm liệt kê mọi nhóm kèm
+số item; nhóm đã tắt ghi rõ "nhóm đã tắt".
+- Cột: Item (nhãn + chip `Đã tắt` + nút bút chì, mã mono, mô tả 2 dòng) · Nhóm (nhãn + mã) ·
+  Feature key (kèm cảnh báo "Item duy nhất mang khóa") · Nhãn phụ · Bật (`Switch` + chữ trạng thái)
+  · Sort · Đang dùng (`N link · M ghi đè` + "xóa được" / "không xóa được") · menu `⋯` (Sửa item ·
+  Bật/Tắt · Xóa item vĩnh viễn). Mọi trường của `AdminCatalogItem` đều hiện trên hàng.
+- Nút bút chì và "Sửa item" mở `ItemFormDialog` ở chế độ sửa (nhãn, mô tả, nhóm, feature key, nhãn
+  phụ, sort, bật/tắt).
 
-**Tab Từ vựng** → `VocabularyTab`: hai bảng chỉ đọc, feature key (kèm `reserved` + số item đang mang)
-và limit key.
+**Tab Khóa hệ thống** → `SystemKeysTab`: hai thẻ chỉ đọc, "Khóa tính năng" (feature key, kèm chip
+`reserved` + số item đang mang) và "Khóa giới hạn" (limit key + nhãn tiếng Việt). Wording tránh chữ
+"từ vựng" / "tập đóng": người đọc màn này là admin, không phải người viết backend.
 
 ### `/plans/[planCode]`
 `PlanDetailScreen` · hai tab trên `?tab=` (`overview` mặc định, `composition`). Header: tên, chip

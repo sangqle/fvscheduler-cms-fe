@@ -32,10 +32,11 @@ function RowsSkeleton() {
 }
 
 /**
- * Hai từ vựng đóng của catalog: feature key (gác route) và limit key (giới hạn số). Thêm khóa mới
- * phải sửa backend, nên màn này chỉ đọc, đứng đây để soạn gói không phải đoán tên khóa.
+ * Hai danh sách khóa cố định của hệ thống: khóa tính năng (`featureKey`, quyết định workspace mở
+ * được gì) và khóa giới hạn (`limitKey`, giới hạn số của một gói). Cả hai nằm trong code backend
+ * nên màn này chỉ đọc; nó đứng đây để lúc soạn gói không phải đoán tên khóa.
  */
-export function VocabularyTab() {
+export function SystemKeysTab() {
   const featureKeys = useFeatureKeys();
   const limitKeys = useLimitKeys();
 
@@ -44,11 +45,12 @@ export function VocabularyTab() {
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Feature key</CardTitle>
-            <ReadOnlyHint>Tập đóng, thêm khóa phải sửa backend</ReadOnlyHint>
+            <CardTitle>Khóa tính năng</CardTitle>
+            <ReadOnlyHint>Thêm khóa mới phải sửa backend</ReadOnlyHint>
           </div>
           <CardDescription>
-            Khóa gác route phía backend · số item là số item đang bật mang khóa đó, tính lúc đọc
+            Tên kỹ thuật: feature key · quyết định workspace mở được tính năng nào. Số bên phải là số item
+            đang bật mang khóa đó, tính lúc đọc.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -79,7 +81,7 @@ export function VocabularyTab() {
             </div>
           )}
           <Text variant="caption" muted className="mt-3">
-            Khóa còn đúng 1 item mang: tắt hoặc xóa item đó sẽ bị backend từ chối.
+            Khóa chỉ còn đúng 1 item mang: tắt hoặc xóa item đó sẽ bị backend từ chối.
           </Text>
         </CardContent>
       </Card>
@@ -87,10 +89,13 @@ export function VocabularyTab() {
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Limit key</CardTitle>
-            <ReadOnlyHint>Tập đóng, thêm khóa phải sửa backend</ReadOnlyHint>
+            <CardTitle>Khóa giới hạn</CardTitle>
+            <ReadOnlyHint>Thêm khóa mới phải sửa backend</ReadOnlyHint>
           </div>
-          <CardDescription>Giới hạn số của một gói · chọn được ở tab Thành phần của từng gói</CardDescription>
+          <CardDescription>
+            Tên kỹ thuật: limit key · giới hạn số của một gói, ví dụ số chi nhánh hay số album mỗi tháng.
+            Đặt giá trị ở tab Thành phần của từng gói.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {limitKeys.error ? (
@@ -105,7 +110,8 @@ export function VocabularyTab() {
             </div>
           )}
           <Text variant="caption" muted className="mt-3">
-            Gói mang khóa với giá trị null = không giới hạn (∞) · không mang khóa = gói không có giới hạn đó.
+            Khóa có trong gói nhưng để trống giá trị = không giới hạn (∞) · khóa không có trong gói = gói
+            không mang giới hạn đó.
           </Text>
         </CardContent>
       </Card>

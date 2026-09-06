@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Layers, MoreHorizontal, Pencil, Power, Search, Trash2 } from 'lucide-react';
+import { ArrowRight, Layers, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
@@ -15,14 +15,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { Text } from '@/components/ui/Text';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useToast } from '@/components/ui/ToastProvider';
-import { ChoiceSelect, FilterSelect } from '@/components/admin/shared/FilterSelect';
 import { ErrorState } from '@/components/admin/shared/QueryState';
+import { hasActivePlanFilters, type PlanFilterValues } from '@/components/admin/plans/CatalogFilters';
 import { DeletePlanDialog } from '@/components/admin/plans/DeletePlanDialog';
+import { PlanFormDialog } from '@/components/admin/plans/PlanFormDialog';
 import {
   LimitChips,
   PlanStateBadges,
@@ -32,20 +32,8 @@ import {
   referenceCount,
 } from '@/components/admin/plans/planDisplay';
 import { useAdminPlans, useUpdatePlan } from '@/hooks/useAdminPlans';
-import { useUrlState } from '@/hooks/useUrlState';
 import { apiErrorMessage } from '@/lib/api/auth';
 import type { AdminPlan, UpdatePlanInput } from '@/types/admin';
-
-const STATUS_OPTIONS = [
-  { value: 'active', label: 'Đang bán' },
-  { value: 'inactive', label: 'Ngừng bán' },
-];
-
-const SORT_OPTIONS = [
-  { value: 'sort', label: 'Sort của trang giá' },
-  { value: 'code', label: 'Mã gói' },
-  { value: 'price', label: 'Giá năm' },
-];
 
 /** Chỉ 4 trường lõi được `PUT`, giá giữ nguyên khi bảng chỉ bật/tắt bán. */
 function corePayload(plan: AdminPlan, patch: Partial<UpdatePlanInput> = {}): UpdatePlanInput {
@@ -61,7 +49,7 @@ function corePayload(plan: AdminPlan, patch: Partial<UpdatePlanInput> = {}): Upd
   };
 }
 
-function sortPlans(plans: AdminPlan[], by: string): AdminPlan[] {
+function sortPlans(plans: AdminPlan[], by: PlanFilterValues['sort']): AdminPlan[] {
   const rows = [...plans];
   if (by === 'code') return rows.sort((a, b) => a.code.localeCompare(b.code));
   if (by === 'price') {
@@ -74,44 +62,41 @@ function sortPlans(plans: AdminPlan[], by: string): AdminPlan[] {
   return rows.sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code));
 }
 
-/** CMS-07: danh sách gói quản lý được — bật/tắt bán ngay trên hàng, tạo, xóa khi chưa ai dùng. */
-export function PlanTable({ onCreate }: { onCreate: () => void }) {
+/**
+ * CMS-07: danh sách gói quản lý được. Lọc và sắp xếp phía client theo `values` (đọc từ URL ở màn
+ * cha). Trên hàng: bật/tắt bán bằng `Switch`, sửa tên / giá bằng dialog, xóa khi chưa ai dùng.
+ */
+export function PlanTable({
+  values,
+  createOpen,
+  onCreateOpenChange,
+}: {
+  values: PlanFilterValues;
+  createOpen: boolean;
+  onCreateOpenChange: (o: boolean) => void;
+}) {
   const router = useRouter();
-  const { get, set } = useUrlState();
   const { showToast } = useToast();
   const { data, isPending, error, refetch } = useAdminPlans();
   const update = useUpdatePlan();
 
-  const qParam = get('q');
-  const status = get('status');
-  const sortBy = get('sort') ?? 'sort';
-
-  const [q, setQ] = React.useState(qParam ?? '');
-  React.useEffect(() => setQ(qParam ?? ''), [qParam]);
-  React.useEffect(() => {
-    if (q === (qParam ?? '')) return;
-    const t = setTimeout(() => set({ q: q || undefined }), 300);
-    return () => clearTimeout(t);
-  }, [q, qParam, set]);
-
   /** Gói đang chờ xác nhận trước khi đổi trạng thái bán (ngừng bán, hoặc mở bán gói còn rỗng). */
   const [pendingToggle, setPendingToggle] = React.useState<AdminPlan | null>(null);
+  const [editing, setEditing] = React.useState<AdminPlan | null>(null);
   const [deleting, setDeleting] = React.useState<AdminPlan | null>(null);
 
   const rows = React.useMemo(() => {
-    const needle = (qParam ?? '').trim().toLowerCase();
+    const needle = (values.q ?? '').trim().toLowerCase();
     const filtered = (data ?? []).filter((p) => {
-      if (status === 'active' && !p.isActive) return false;
-      if (status === 'inactive' && p.isActive) return false;
+      if (values.status === 'active' && !p.isActive) return false;
+      if (values.status === 'inactive' && p.isActive) return false;
       if (!needle) return true;
       return p.code.toLowerCase().includes(needle) || p.name.toLowerCase().includes(needle);
     });
-    return sortPlans(filtered, sortBy);
-  }, [data, qParam, status, sortBy]);
+    return sortPlans(filtered, values.sort);
+  }, [data, values.q, values.status, values.sort]);
 
-  const activeCount = (data ?? []).filter((p) => p.isActive).length;
-  const draftCount = (data ?? []).filter((p) => !p.isActive && referenceCount(p) === 0).length;
-  const filtered = Boolean(qParam || status);
+  const filtered = hasActivePlanFilters(values);
 
   function applyActive(plan: AdminPlan, isActive: boolean) {
     update.mutate(
@@ -137,9 +122,7 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
 
   /** Ngừng bán gói đang có người dùng, và mở bán gói chưa có limit nào, đều hỏi lại trước. */
   function requestToggle(plan: AdminPlan, next: boolean) {
-    const risky = next
-      ? Object.keys(plan.limits).length === 0
-      : referenceCount(plan) > 0;
+    const risky = next ? Object.keys(plan.limits).length === 0 : referenceCount(plan) > 0;
     if (risky) setPendingToggle(plan);
     else applyActive(plan, next);
   }
@@ -148,12 +131,24 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
     {
       id: 'plan',
       header: 'Gói',
-      className: 'min-w-52',
+      className: 'min-w-56',
       cell: (p) => (
         <div className="flex flex-col gap-0.5">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-semibold text-foreground">{p.name}</span>
             <PlanStateBadges plan={p} />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Sửa tên và giá gói ${p.name}`}
+              className="-my-1.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditing(p);
+              }}
+            >
+              <Pencil className="size-3.5" />
+            </Button>
           </span>
           <span className="font-mono text-xs text-muted-foreground">{p.code}</span>
         </div>
@@ -190,6 +185,12 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
       cell: (p) => <PriceCell list={p.yearlyListPrice} sale={p.yearlySalePrice} />,
     },
     { id: 'limits', header: 'Limits', className: 'min-w-44', cell: (p) => <LimitChips limits={p.limits} /> },
+    {
+      id: 'sort',
+      header: 'Sort',
+      className: 'font-mono text-xs text-muted-foreground',
+      cell: (p) => p.sortOrder,
+    },
     {
       id: 'composition',
       header: 'Thành phần',
@@ -229,11 +230,9 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/plans/${p.code}`}>
-                  <Pencil className="mr-2 size-4" />
-                  Sửa thông tin gói
-                </Link>
+              <DropdownMenuItem onSelect={() => setEditing(p)}>
+                <Pencil className="mr-2 size-4" />
+                Sửa tên và giá
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/plans/${p.code}?tab=composition`}>
@@ -267,34 +266,6 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          leadingIcon={<Search className="size-4" />}
-          placeholder="Tìm theo mã hoặc tên gói"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label="Tìm gói"
-          containerClassName="w-full min-w-52 flex-1 basis-60 sm:w-auto lg:max-w-80"
-        />
-        <FilterSelect
-          label="Trạng thái"
-          value={status}
-          onChange={(v) => set({ status: v })}
-          options={STATUS_OPTIONS}
-          className="shrink-0"
-        />
-        <ChoiceSelect
-          label="Sắp theo"
-          value={sortBy}
-          onChange={(v) => set({ sort: v === 'sort' ? undefined : v })}
-          options={SORT_OPTIONS}
-          className="shrink-0"
-        />
-        <Text variant="caption" muted className="ml-auto">
-          {activeCount} gói đang bán · {draftCount} nháp chưa mở bán
-        </Text>
-      </div>
-
       <DataTable
         columns={columns}
         data={rows}
@@ -309,7 +280,7 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
             <EmptyState
               title="Catalog chưa có gói nào"
               description="Tạo một gói ở trạng thái nháp, soạn thành phần, rồi mới mở bán."
-              action={<Button onClick={onCreate}>Tạo gói</Button>}
+              action={<Button onClick={() => onCreateOpenChange(true)}>Tạo gói</Button>}
             />
           )
         }
@@ -317,6 +288,7 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
       />
 
       <Text variant="caption" muted className="flex flex-col gap-0.5">
+        <span>Bấm vào hàng để mở chi tiết · biểu tượng bút chì sửa tên, thứ tự và giá ngay tại chỗ</span>
         <span>∞ = giới hạn có trong gói nhưng không chặn · thiếu chip = gói không mang giới hạn đó</span>
         <span>Bỏ trống giá bán = bán đúng giá niêm yết · giá gạch ngang là giá niêm yết</span>
         <span>
@@ -345,6 +317,16 @@ export function PlanTable({ onCreate }: { onCreate: () => void }) {
           }}
         />
       )}
+
+      <PlanFormDialog
+        open={createOpen || editing !== null}
+        plan={editing}
+        onOpenChange={(o) => {
+          if (o) return;
+          setEditing(null);
+          onCreateOpenChange(false);
+        }}
+      />
 
       <DeletePlanDialog
         plan={deleting}

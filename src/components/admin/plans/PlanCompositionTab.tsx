@@ -87,7 +87,7 @@ export function PlanCompositionTab({ plan }: { plan: AdminPlanDetail }) {
   const [serverError, setServerError] = React.useState<string | null>(null);
 
   /**
-   * Nạp bản nháp khi từ vựng limit tải xong, và nạp lại khi gói **thật sự** được ghi lại
+   * Nạp bản nháp khi danh sách khóa giới hạn tải xong, và nạp lại khi gói **thật sự** được ghi lại
    * (`updatedAt` đổi) — không neo vào identity của `plan`, nếu không thì một lần refetch lúc quay
    * lại tab trình duyệt sẽ xóa sạch bản nháp đang soạn.
    */
@@ -386,7 +386,7 @@ export function PlanCompositionTab({ plan }: { plan: AdminPlanDetail }) {
             <CardHeader>
               <CardTitle>Limits</CardTitle>
               <CardDescription>
-                Từ vựng đóng: {limitKeyCodes.length} khóa. Thêm khóa mới phải sửa backend.
+                Danh sách cố định: {limitKeyCodes.length} khóa. Thêm khóa mới phải sửa backend.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">

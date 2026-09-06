@@ -252,7 +252,7 @@ export function ItemFormDialog({
             <Field
               id="item-feature-key"
               label="Feature key"
-              hint="Từ vựng đóng · để trống nếu item chỉ là dòng quảng bá, không gác route nào"
+              hint="Danh sách khóa cố định · để trống nếu item chỉ là dòng quảng bá, không mở tính năng nào"
             >
               <Select
                 value={form.featureKey || NO_FEATURE_KEY}

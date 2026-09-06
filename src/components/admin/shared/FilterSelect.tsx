@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 export interface FilterOption {
   value: string;
   label: string;
+  /** Số bản ghi thuộc lựa chọn này, hiện mờ bên phải nhãn **trong danh sách** (không lên trigger). */
+  count?: number;
 }
 
 /**
@@ -48,11 +50,22 @@ export function FilterSelect({
         <SelectItem value={ALL}>{allLabel}</SelectItem>
         {options.map((o) => (
           <SelectItem key={o.value} value={o.value}>
-            {o.label}
+            <OptionLabel option={o} />
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+/** Nhãn + số đếm (nếu có) của một dòng trong danh sách. */
+function OptionLabel({ option }: { option: FilterOption }) {
+  if (option.count === undefined) return <>{option.label}</>;
+  return (
+    <span className="flex items-baseline gap-2">
+      <span>{option.label}</span>
+      <span className="font-mono text-xs text-muted-foreground">{option.count}</span>
+    </span>
   );
 }
 

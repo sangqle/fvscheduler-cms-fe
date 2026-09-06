@@ -20,7 +20,7 @@ export const catalogKeys = {
   limitKeys: ['admin', 'catalog', 'limit-keys'] as const,
 };
 
-/** Từ vựng và danh mục đổi rất chậm; 5 phút là đủ để một phiên soạn gói không gọi lại liên tục. */
+/** Khóa hệ thống và danh mục đổi rất chậm; 5 phút là đủ để một phiên soạn gói không gọi lại liên tục. */
 const CATALOG_STALE_MS = 5 * 60_000;
 
 /** GET /api/admin/catalog/groups: nhóm kèm item con. Nhóm không có CRUD, chỉ đọc. */
@@ -45,7 +45,7 @@ export function useCatalogItems() {
   });
 }
 
-/** GET /api/admin/catalog/feature-keys: từ vựng đóng + số item đang mang khóa (tính lúc đọc). */
+/** GET /api/admin/catalog/feature-keys: danh sách khóa cố định + số item đang mang khóa (tính lúc đọc). */
 export function useFeatureKeys() {
   const { headers, enabled } = useAuthHeaders();
   return useQuery({
@@ -56,7 +56,7 @@ export function useFeatureKeys() {
   });
 }
 
-/** GET /api/admin/catalog/limit-keys: từ vựng đóng của limits, thêm khóa phải sửa backend. */
+/** GET /api/admin/catalog/limit-keys: danh sách khóa giới hạn cố định, thêm khóa phải sửa backend. */
 export function useLimitKeys() {
   const { headers, enabled } = useAuthHeaders();
   return useQuery({
