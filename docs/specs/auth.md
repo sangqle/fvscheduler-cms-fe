@@ -1,6 +1,6 @@
 # Auth + gate allowlist
 
-Updated: 2026-09-05 · Thiết kế: CMS-09 (403) · Backend: `ADM-FLOW-01-sign-in-and-gate`
+Updated: 2026-09-06 · Thiết kế: CMS-09 (403) · Backend: `ADM-FLOW-01-sign-in-and-gate`
 
 ## Mục đích
 
@@ -41,6 +41,18 @@ backend mới thấy shell. FE không có role, không có permission key.
 - Mọi hook admin lấy header qua `useAuthHeaders()`; query chỉ `enabled` khi có token.
 - 401 từ login sai mật khẩu không được đăng xuất phiên hiện tại (guard so sánh đúng bearer).
 - Không lưu secret ở `.env.production`; `NEXTAUTH_SECRET` đặt ở Vercel.
+
+## Env prod (Vercel project `fvscheduler-cms-fe`, domain `fravik.framevis.com`)
+
+- Biến trên Vercel dashboard **đè** `.env.production`. Dashboard chỉ được có
+  `NEXTAUTH_SECRET` (Production + Preview); mọi biến `NEXT_PUBLIC_*` và `NEXTAUTH_URL`
+  lấy từ `.env.production` đã commit. Đừng import `.env.example` lên dashboard: giá trị
+  placeholder ở đó từng làm `NEXT_PUBLIC_GOOGLE_CLIENT_ID` rỗng, Google trả
+  `Missing required parameter: client_id`, và `NEXT_PUBLIC_API_URL` trỏ localhost.
+- App chỉ đọc 4 biến: `NEXT_PUBLIC_API_URL`, `NEXTAUTH_URL`, `NEXT_PUBLIC_ERP_URL`,
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. Biến CDN / proxy ảnh / `FRAMEVIS_API_URL` là của ERP, không dùng.
+- Redirect URI đăng ký trên Google Cloud Console: `https://fravik.framevis.com/api/auth/callback/google`
+  (khác ERP, ERP dùng `/auth/google/callback`).
 
 ## Types
 
