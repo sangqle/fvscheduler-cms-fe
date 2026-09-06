@@ -42,12 +42,6 @@ export function Sidebar({ user, className }: { user: ShellUser; className?: stri
           );
         })}
       </nav>
-
-      <div className="mx-3 mt-4 rounded-lg bg-background/5 p-3 text-[11.5px] leading-relaxed text-background/70">
-        <p className="mb-0.5 font-semibold text-background/85">Phạm vi v1</p>
-        Chỉ đọc xuyên tenant. Ghi: cấp / gia hạn / hủy gói, mark-paid, và catalog gói.
-      </div>
-
       <div className="mt-auto flex items-center gap-2.5 border-t border-background/10 px-4 py-3.5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
           {getInitials(user.name) || 'AD'}
