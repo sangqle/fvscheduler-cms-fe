@@ -1,4 +1,4 @@
-import { Building2, Package, Receipt, type LucideIcon } from 'lucide-react';
+import { Building2, Mail, Package, Receipt, type LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -6,12 +6,21 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-/** Ba khu vực của CMS v1 (thiết kế CMS-01..07). */
+/** Các khu vực của CMS v1 (thiết kế CMS-01..07) cộng email hệ thống. */
 export const NAV_ITEMS: NavItem[] = [
   { href: '/workspaces', label: 'Workspace', icon: Building2 },
   { href: '/orders', label: 'Đơn hàng', icon: Receipt },
   { href: '/plans', label: 'Catalog gói', icon: Package },
+  { href: '/mail', label: 'Email hệ thống', icon: Mail },
 ];
+
+/**
+ * Route cần trọn bề ngang: trình soạn template đặt trình soạn mã và khung xem trước cạnh nhau, bó
+ * vào 1400px là ép mỗi cột xuống dưới 700px, hẹp hơn cả khung thư 600px mà preview phải dựng.
+ */
+export function isFullWidthRoute(pathname: string): boolean {
+  return pathname.startsWith('/mail/templates/');
+}
 
 /** Nhãn breadcrumb cấp 1 theo pathname. */
 export function sectionLabel(pathname: string): string {

@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 
-export type StatIntent = 'primary' | 'success' | 'warning' | 'info' | 'destructive';
+export type StatIntent = 'primary' | 'success' | 'warning' | 'info' | 'destructive' | 'muted';
 
 /**
  * Static intent → token-class maps. Kept as full literal strings (never
@@ -15,6 +15,8 @@ const intentTile: Record<StatIntent, string> = {
   warning: 'bg-warning-soft text-warning-deep',
   info: 'bg-info-soft text-info-deep',
   destructive: 'bg-destructive-soft text-destructive-deep',
+  /** Trung tính: con số có thật nhưng không mang tin tốt hay xấu (đã hủy, đã bỏ qua). */
+  muted: 'bg-muted text-muted-foreground',
 };
 
 /** Value text in the intent's own colour — opt-in via `emphasizeValue`. */
@@ -24,6 +26,7 @@ const intentValue: Record<StatIntent, string> = {
   warning: 'text-warning-deep',
   info: 'text-info-deep',
   destructive: 'text-destructive-deep',
+  muted: 'text-muted-foreground',
 };
 
 const intentBorder: Record<StatIntent, string> = {
@@ -32,6 +35,7 @@ const intentBorder: Record<StatIntent, string> = {
   warning: 'border-warning/20',
   info: 'border-info/20',
   destructive: 'border-destructive/20',
+  muted: 'border-border',
 };
 
 export interface StatCardProps {

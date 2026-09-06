@@ -502,7 +502,9 @@ export function PlanCompositionTab({ plan }: { plan: AdminPlanDetail }) {
         </div>
       </div>
 
-      <Card className="sticky bottom-0 z-10 flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* `bottom-4 sm:bottom-6` khớp đệm của `main`: đệm đó đã chuyển vào khối trong (xem `AdminShell`)
+          nên vùng cuộn hết tự chừa chỗ, `bottom-0` sẽ dán thẻ sát mép dưới cửa sổ. */}
+      <Card className="sticky bottom-4 z-10 flex flex-col gap-3 p-3 sm:bottom-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-0.5">
           <Text variant="body-sm" as="span" className="font-semibold">
             {draft.groups.length} nhóm · {draft.links.length} ghi đè ·{' '}

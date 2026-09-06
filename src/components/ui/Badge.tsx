@@ -51,9 +51,14 @@ const badgeVariants = cva(
        * mã, số hiệu. Đây là một quyết định typography nên nó ở đây dưới dạng variant, không phải
        * một `className="font-mono uppercase"` rải trong feature (xem CLAUDE.md: IBM Plex Mono cho
        * nhãn và số).
+       *
+       * `'plain'` là mono **không** in hoa, cho nội dung mà chữ hoa làm sai nghĩa chứ không phải chỉ
+       * làm to tiếng: số hiệu bản "v3" bị in thành "V3" (trái quy ước ghi version), tên biến phân
+       * biệt hoa thường bị nắn, và một cụm tiếng Việt viết hoa toàn bộ thì đọc ra như đang quát.
        */
       mono: {
         true: 'font-mono uppercase tracking-wider',
+        plain: 'font-mono',
         false: '',
       },
       /**

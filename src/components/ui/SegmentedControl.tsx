@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 export interface SegmentedOption {
   value: string;
   /**
-   * Nhãn tab. Nhận node để một tab có thể mang chip phụ (vd toggle chu kỳ thanh toán với nhãn
-   * "tặng 2 tháng"); chuỗi thuần vẫn là dạng thường gặp.
+   * Nhãn của một lựa chọn. Nhận node để một lựa chọn có thể mang chip phụ (vd toggle chu kỳ thanh
+   * toán với nhãn "tặng 2 tháng"); chuỗi thuần vẫn là dạng thường gặp.
    */
   label: React.ReactNode;
   /** Hiện badge số bên phải nhãn (vd bộ lọc lịch hẹn). */
@@ -15,7 +15,7 @@ export interface SegmentedOption {
 }
 
 /**
- * Kế thừa `React.HTMLAttributes<HTMLDivElement>` và spread phần còn lại xuống khối `role="tablist"`:
+ * Kế thừa `React.HTMLAttributes<HTMLDivElement>` và spread phần còn lại xuống khối `role="radiogroup"`:
  * trước đây component chỉ nhận đúng các prop nó khai báo, nên một thuộc tính hợp lệ truyền từ ngoài
  * (`data-coach` của chỉ dẫn tại chỗ, `id`, `data-testid`…) bị bỏ **im lặng** — TS không chặn mà DOM
  * cũng không có, tức là một điểm neo trông như đã gắn nhưng không bao giờ tìm thấy.
@@ -30,7 +30,7 @@ export interface SegmentedControlProps extends React.HTMLAttributes<HTMLDivEleme
    */
   fullWidth?: boolean;
   /**
-   * Khoá cả thanh: người dùng không đủ quyền, hoặc đang có thao tác lưu chạy dở. Từng tab thành
+   * Khoá cả thanh: người dùng không đủ quyền, hoặc đang có thao tác lưu chạy dở. Từng nút thành
    * `<button disabled>` chứ không chỉ mờ đi bằng `opacity` — thiếu `disabled` thật thì bàn phím
    * vẫn Tab tới được và Enter vẫn đổi giá trị, tức là một control "trông như đã khoá" mà vẫn sửa
    * được dữ liệu.
@@ -58,8 +58,11 @@ export function SegmentedControl({
   ...rest
 }: SegmentedControlProps) {
   return (
+    // `radiogroup` chứ không phải `tablist`: mọi chỗ dùng đều là chọn-một trong form (sắp xếp, kiểu
+    // lọc, nguồn ngữ cảnh, loại template), không có tabpanel nào để `aria-controls` trỏ tới, nên đọc
+    // màn hình xướng "tab, 1 of 3" cho một thứ vốn là nhóm radio. Tab thật thì dùng primitive `Tabs`.
     <div
-      role="tablist"
+      role="radiogroup"
       aria-label={ariaLabel}
       {...rest}
       className={cn(
@@ -67,7 +70,10 @@ export function SegmentedControl({
         size === 'sm' ? 'p-0.5' : 'p-1',
         // `w-full` tách khỏi `flex`: consumer có thể trả bề ngang về auto ở breakpoint lớn
         // (`className="sm:w-auto"`) mà tab vẫn `flex-1`, tức là co theo nội dung chứ không vỡ.
-        fullWidth ? 'flex w-full' : 'inline-flex max-w-full',
+        // Nhánh co theo nội dung phải ghim `w-fit` chứ không để `width: auto`: `inline-flex` chỉ co khi
+        // nằm trong dòng chữ, còn đặt trong cha `flex-col` (`Field`) hay ô grid thì `align-items` /
+        // `justify-items: stretch` mặc định kéo nó kín bề ngang, để lại khoảng trống bên phải tab cuối.
+        fullWidth ? 'flex w-full' : 'inline-flex w-fit max-w-full',
         disabled && 'opacity-50',
         className,
       )}
@@ -78,8 +84,8 @@ export function SegmentedControl({
           <button
             key={opt.value}
             type="button"
-            role="tab"
-            aria-selected={active}
+            role="radio"
+            aria-checked={active}
             disabled={disabled}
             onClick={() => onValueChange(opt.value)}
             className={cn(

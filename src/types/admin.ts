@@ -367,3 +367,174 @@ export interface MarkPaidResult {
   order: AdminOrderDetail;
   subscription: AdminSubscriptionRow;
 }
+
+// ─── Mail (email hệ thống) ────────────────────────────────────────────────────
+
+/** `PARTIAL` là khung dùng chung, mọi đường gửi từ chối gửi trực tiếp nó. */
+export type MailCategory = 'SYSTEM' | 'ANNOUNCEMENT' | 'PARTIAL';
+/** Nhóm biến catalog; `COMMON` luôn có, `SUBSCRIPTION` thuộc phase 2 nên backend chưa trả về. */
+export type MailContextGroup = 'COMMON' | 'ACCOUNT' | 'WORKSPACE';
+export type MailCampaignStatus = 'QUEUED' | 'RUNNING' | 'DONE' | 'CANCELED';
+export type MailMessageStatus = 'PENDING' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELED';
+
+/** GET /api/admin/mail/templates → PageResponse<AdminMailTemplateRow> (chỉ metadata, không nội dung). */
+export interface AdminMailTemplateRow {
+  code: string;
+  name: string;
+  description: string | null;
+  category: MailCategory;
+  requiredContext: MailContextGroup[];
+  active: boolean;
+  currentVersion: number;
+  updatedAt: string;
+}
+
+/** GET /api/admin/mail/templates/{code}: metadata + nội dung của bản đang phát hành. */
+export interface AdminMailTemplate extends AdminMailTemplateRow {
+  subjectTemplate: string;
+  htmlBody: string;
+  /** Biến tự do khai tường minh cho version này; không suy ra từ nội dung. */
+  customVariables: string[];
+  createdAt: string;
+}
+
+/** GET /api/admin/mail/templates/{code}/versions — bản đã phát hành là bất biến. */
+export interface AdminMailTemplateVersion {
+  version: number;
+  subjectTemplate: string;
+  htmlBody: string;
+  customVariables: string[];
+  createdAt: string;
+}
+
+/** POST /templates (kèm `code`) và PUT /templates/{code} (bỏ `code`) dùng chung body này. */
+export interface MailTemplateInput {
+  /** `^[a-z0-9][a-z0-9-]{2,63}$`, chỉ gửi lúc tạo và không đổi được sau đó. */
+  code?: string;
+  name: string;
+  description: string | null;
+  category: MailCategory;
+  requiredContext: MailContextGroup[];
+  subjectTemplate: string;
+  htmlBody: string;
+  customVariables: string[];
+}
+
+export interface AdminMailVariable {
+  name: string;
+  description: string;
+  sample: string;
+}
+
+/** GET /api/admin/mail/variables — catalog biến cho trình soạn thảo. */
+export interface AdminMailVariableGroup {
+  group: MailContextGroup;
+  variables: AdminMailVariable[];
+}
+
+/** Ngữ cảnh thật cho preview / test-send; bỏ trống thì dùng giá trị mẫu của catalog. */
+export interface MailContextInput {
+  workspaceId?: string;
+  accountId?: string;
+  variables?: Record<string, string>;
+}
+
+/** POST /templates/{code}/preview — render bản đang phát hành, KHÔNG gửi gì. */
+export interface MailPreviewResult {
+  subject: string;
+  html: string;
+}
+
+export interface MailTestSendInput extends MailContextInput {
+  to: string;
+}
+
+export interface MailTestSendResult {
+  /** Địa chỉ đã yêu cầu; ở dev SES có thể bị đổi hướng mà API không báo. */
+  to: string;
+  providerMessageId: string;
+}
+
+/** GET /api/admin/mail/campaigns → PageResponse<AdminMailCampaignRow> */
+export interface AdminMailCampaignRow {
+  campaignCode: string;
+  templateCode: string;
+  /** Version ghim lúc tạo; sửa template sau đó không đổi nội dung chiến dịch đang chạy. */
+  templateVersion: number;
+  name: string;
+  status: MailCampaignStatus;
+  total: number;
+  createdAt: string;
+}
+
+/** GET /api/admin/mail/campaigns/{code}: thêm số dòng theo từng trạng thái. */
+export interface AdminMailCampaignDetail extends AdminMailCampaignRow {
+  pending: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  canceled: number;
+}
+
+/** POST /api/admin/mail/campaigns: đúng một trong `workspaceIds` / `accountIds`, khác đi là 400. */
+export interface CreateCampaignInput {
+  templateCode: string;
+  name: string;
+  workspaceIds?: string[];
+  accountIds?: string[];
+  variables?: Record<string, string>;
+  /** true = chỉ đếm người nhận, không chèn dòng nào. */
+  dryRun: boolean;
+}
+
+export interface CreateCampaignResult {
+  /** Vắng hẳn khỏi JSON khi `dryRun` (không phải null). */
+  campaignCode?: string;
+  templateCode: string;
+  templateVersion: number;
+  queued: number;
+  skippedDuplicate: number;
+  skippedNoEmail: number;
+  dryRun: boolean;
+}
+
+export interface CampaignActionResult {
+  campaignCode: string;
+  affected: number;
+  status: MailCampaignStatus;
+}
+
+/** GET /api/admin/mail/messages — outbox, chỉ đọc; message không lộ định danh nào. */
+export interface AdminMailMessageRow {
+  campaignCode: string | null;
+  templateCode: string;
+  templateVersion: number;
+  toEmail: string;
+  workspaceId: string | null;
+  accountId: string | null;
+  status: MailMessageStatus;
+  attempts: number;
+  nextAttemptAt: string;
+  lastError: string | null;
+  providerMessageId: string | null;
+  createdAt: string;
+  sentAt: string | null;
+}
+
+export interface AdminMailTemplateListParams {
+  category?: MailCategory;
+  active?: boolean;
+  page?: number;
+  size?: number;
+  /** `code` (mặc định), `name` hoặc `updatedAt,desc`. */
+  sort?: string;
+}
+
+export interface AdminMailMessageListParams {
+  campaignCode?: string;
+  status?: MailMessageStatus;
+  email?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
