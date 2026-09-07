@@ -76,6 +76,16 @@ export interface ColumnDef<TRow> {
   className?: string;
   /** Loading-row placeholder for this column — defaults to a generic full-width bar when omitted. */
   skeleton?: React.ReactNode;
+  /**
+   * Số cột ô này chiếm **ở một hàng cụ thể** (mặc định 1). Trả về n > 1 thì n-1 cột kế tiếp bị bỏ
+   * qua ở đúng hàng đó, phần `cell` của chúng không được gọi.
+   *
+   * Dùng khi một hàng không có dữ liệu cho cả một cụm cột liền nhau và câu giải thích mới là thứ
+   * đáng đọc: một booking đã tombstone không còn ngày chụp, khách hay trạng thái, ba ô trống cạnh
+   * nhau nói ít hơn hẳn một ô nét đứt viết rõ vì sao trống. Chỉ có tác dụng ở bảng `md+`; thẻ trên
+   * phone vốn đã bỏ qua ô rỗng nên không cần.
+   */
+  colSpan?: (row: TRow) => number;
 }
 
 /** Default rows-per-page choices for the built-in pagination footer. */
@@ -179,6 +189,25 @@ interface DataTableProps<TRow> {
   onPageChange?: (page: number) => void;
   /** Rows-per-page change handler — used when `manualPagination`. */
   onPageSizeChange?: (size: number) => void;
+}
+
+/**
+ * Một hàng của bảng, tôn trọng `ColumnDef.colSpan`: ô nào khai chiếm n cột thì n-1 cột sau nó bị
+ * nuốt, `cell` của chúng không chạy.
+ */
+function renderCells<TRow>(columns: ColumnDef<TRow>[], row: TRow) {
+  const cells: React.ReactNode[] = [];
+  for (let i = 0; i < columns.length; i += 1) {
+    const col = columns[i];
+    const span = Math.min(Math.max(col.colSpan?.(row) ?? 1, 1), columns.length - i);
+    cells.push(
+      <TableCell key={col.id} className={col.className} colSpan={span > 1 ? span : undefined}>
+        {col.cell(row)}
+      </TableCell>,
+    );
+    i += span - 1;
+  }
+  return cells;
 }
 
 export function DataTable<TRow>({
@@ -317,11 +346,7 @@ export function DataTable<TRow>({
                   )}
                   style={{ animationDelay: `${Math.min(i, 8) * 20}ms` }}
                 >
-                  {columns.map((col) => (
-                    <TableCell key={col.id} className={col.className}>
-                      {col.cell(row)}
-                    </TableCell>
-                  ))}
+                  {renderCells(columns, row)}
                 </TableRow>
                 {isExpanded && (
                   <TableRow className="hover:bg-transparent">

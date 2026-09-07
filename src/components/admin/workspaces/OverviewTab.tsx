@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Ban, CalendarPlus, Info, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, Ban, CalendarPlus, Info, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -149,10 +150,21 @@ export function OverviewTab({ ws }: { ws: AdminWorkspaceDetail }) {
       </Card>
 
       <Card>
-        <SectionTitle>Số liệu</SectionTitle>
+        <SectionTitle>Thống kê nhanh</SectionTitle>
         <CardContent className="grid grid-cols-2 gap-3">
+          {/* Chỉ Booking bấm được (nó có màn riêng); ba số còn lại giữ nguyên là chữ tĩnh, cùng cỡ
+              cùng vị trí — màu primary và mũi tên là thứ duy nhất tách nó ra. */}
+          <Link
+            href={`/workspaces/${ws.id}?tab=booking`}
+            className="group flex flex-col rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <span className="font-mono text-xl font-semibold text-primary">{ws.stats.bookings}</span>
+            <span className="inline-flex items-center gap-1 text-xs text-primary group-hover:underline">
+              Booking
+              <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </Link>
           {[
-            [ws.stats.bookings, 'Booking'],
             [ws.stats.clients, 'Khách hàng'],
             [ws.counts.activeMembers, 'Thành viên hoạt động'],
             [ws.counts.activeBranches, 'Chi nhánh hoạt động'],

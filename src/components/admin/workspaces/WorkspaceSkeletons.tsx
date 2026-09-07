@@ -38,7 +38,7 @@ export function WorkspaceDetailSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       <DetailHeaderSkeleton badges={2} actions={1} />
-      <TabsListSkeleton labels={['Tổng quan', 'Thành viên', 'Lịch sử gói']} />
+      <TabsListSkeleton labels={['Tổng quan', 'Booking', 'Thành viên', 'Lịch sử gói']} />
       {/* Cùng lưới với `OverviewTab`: thẻ gói chiếm hai cột, thẻ hạn mức đứng bên phải */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <CardSkeleton lines={6} className="lg:col-span-2" />

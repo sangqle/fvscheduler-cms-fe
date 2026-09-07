@@ -13,6 +13,14 @@ import type {
   SubscriptionStatus,
   WorkspaceType,
 } from '@/types/admin';
+import type {
+  BookingItemType,
+  BookingNoteAudience,
+  BookingPaymentKind,
+  BookingPaymentStatus,
+  BookingStatus,
+  ClientAlbumRole,
+} from '@/types/booking';
 
 /**
  * Enum backend → nhãn hiển thị + variant `Badge`. Một chỗ duy nhất, mọi màn dùng chung.
@@ -147,3 +155,115 @@ export function isSendableTemplate(t: { active: boolean; category: MailCategory 
 export function isTestSendable(t: { category: MailCategory }): boolean {
   return t.category !== 'PARTIAL';
 }
+
+// ─── Bookings (drill-down của một workspace) ─────────────────────────────────
+
+/**
+ * Nhãn tiếng Việt cho `booking.status`. Enum này là của **tenant** chứ không phải enum nền tảng,
+ * nên nó được dịch chứ không giữ chữ hoa mono như `ACTIVE`/`SEPAY`: người vận hành đọc
+ * "Đang retouch", không đọc `retouching`.
+ */
+export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
+  pending_confirm: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  shooting: 'Đang chụp',
+  client_selection: 'Khách chọn ảnh',
+  selection_completed: 'Chọn xong',
+  retouching: 'Đang retouch',
+  retouched: 'Retouch xong',
+  printing: 'Đang in',
+  printed: 'In xong',
+  done: 'Hoàn tất',
+  cancelled: 'Đã hủy',
+};
+
+/**
+ * Đường đi thẳng của một booking, đúng thứ tự. `cancelled` **không** nằm trong này: hủy là rời khỏi
+ * đường ray chứ không phải một nấc xa hơn trên đó, cho nó số bước là nói dối rằng booking bị hủy đã
+ * đi hết mọi khâu.
+ */
+export const BOOKING_LIFECYCLE: readonly BookingStatus[] = [
+  'pending_confirm',
+  'confirmed',
+  'shooting',
+  'client_selection',
+  'selection_completed',
+  'retouching',
+  'retouched',
+  'printing',
+  'printed',
+  'done',
+];
+
+/**
+ * Chuỗi 11 trạng thái chỉ dùng **ba màu**: xám cho chưa bắt đầu, magenta cho 8 bước đang chạy, xanh
+ * cho đã xong; `cancelled` xám đậm vì nó nằm ngoài chuỗi. Vị trí trong chuỗi do số mono `n/10` gánh,
+ * không phải màu: mười một màu thì không ai nhớ nổi màu nào đứng trước màu nào.
+ */
+export function bookingStatusVariant(status: BookingStatus): BadgeVariant {
+  if (status === 'cancelled') return 'secondary';
+  if (status === 'done') return 'success';
+  if (status === 'pending_confirm') return 'muted';
+  return 'default';
+}
+
+/** Nấc hiện tại trên `BOOKING_LIFECYCLE` (1-based); `cancelled` trả 0 vì nó không ở trên đường ray. */
+export function bookingStage(status: BookingStatus): number {
+  return BOOKING_LIFECYCLE.indexOf(status) + 1;
+}
+
+/** `unpaid` xám chứ không đỏ: chưa thu là trạng thái bình thường của booking mới, không phải sự cố. */
+export const BOOKING_PAYMENT_STATUS: Record<BookingPaymentStatus, EnumMeta> = {
+  unpaid: { label: 'Chưa thu', variant: 'muted' },
+  partial: { label: 'Một phần', variant: 'warning' },
+  paid: { label: 'Đủ', variant: 'success' },
+};
+
+/** Bản dài của `BOOKING_PAYMENT_STATUS`, dùng ở header drawer nơi có chỗ cho cả cụm từ. */
+export const BOOKING_PAYMENT_STATUS_LONG: Record<BookingPaymentStatus, string> = {
+  unpaid: 'Chưa thu',
+  partial: 'Thu một phần',
+  paid: 'Đã thu đủ',
+};
+
+/** `itemType` giữ nguyên chữ hoa: đây là enum máy đọc, in ra để dán vào câu SQL. */
+export const BOOKING_ITEM_TYPE: Record<BookingItemType, string> = {
+  PACKAGE: 'PACKAGE',
+  CUSTOM: 'CUSTOM',
+  SURCHARGE: 'SURCHARGE',
+  CONCEPT: 'CONCEPT',
+};
+
+export const BOOKING_PAYMENT_KIND: Record<BookingPaymentKind, string> = {
+  deposit: 'Đặt cọc',
+  balance: 'Thanh toán',
+  refund: 'Hoàn tiền',
+  forfeit: 'Mất cọc',
+};
+
+/**
+ * `audience` quyết định nhãn và màu viền của một ghi chú. `all` không có nhãn: ghi chú ai cũng đọc
+ * được là mặc định, gắn thêm chữ "tất cả" chỉ tổ làm nhiễu hai loại kia.
+ */
+export const BOOKING_NOTE_AUDIENCE: Record<BookingNoteAudience, { label: string | null; variant: BadgeVariant }> = {
+  photographer: { label: 'Nhiếp ảnh', variant: 'default' },
+  customer_support: { label: 'CSKH', variant: 'secondary' },
+  all: { label: null, variant: 'muted' },
+};
+
+/** API album chỉ trả id và vai trò, không có tên album. */
+export const CLIENT_ALBUM_ROLE: Record<ClientAlbumRole, string> = {
+  proofing: 'PROOFING',
+  raw: 'RAW',
+  deliverable: 'DELIVERABLE',
+  other: 'OTHER',
+};
+
+/** Backend chỉ nhận `createdAt`, `startAt`, `status`; mọi key khác bị `AdminSort` gạt bỏ. */
+export const BOOKING_SORT_OPTIONS = [
+  { value: 'createdAt,desc', label: 'Ngày tạo, mới nhất' },
+  { value: 'createdAt,asc', label: 'Ngày tạo, cũ nhất' },
+  { value: 'startAt,desc', label: 'Ngày chụp, muộn nhất' },
+  { value: 'startAt,asc', label: 'Ngày chụp, sớm nhất' },
+  { value: 'status,asc', label: 'Trạng thái' },
+];

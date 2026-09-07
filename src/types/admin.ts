@@ -4,6 +4,8 @@
  * Spec: docs/specs/*.md.
  */
 
+import type { BookingPaymentStatus, BookingResponse, BookingStatus } from '@/types/booking';
+
 export type WorkspaceType = 'freelancer' | 'studio';
 
 /** Trạng thái gói suy theo đồng hồ lúc đọc (không phải giá trị lưu DB). */
@@ -162,6 +164,108 @@ export interface AdjustSubscriptionInput {
 
 export interface CancelSubscriptionInput {
   note: string;
+}
+
+// ─── Bookings (drill-down của một workspace) ─────────────────────────────────
+
+/**
+ * Bốn cột tổng hợp writer giữ sẵn trên chính dòng `booking`. Chúng **không** nằm trong
+ * `BookingResponse` (bản đó mang các dòng chi tiết), nên đặt cạnh nhau là đọc được ngay con số lưu
+ * sẵn có còn khớp danh sách nó khai là mình tổng kết hay không.
+ */
+export interface AdminBookingTotals {
+  contractTotal: number;
+  paidAmount: number;
+  /** `contractTotal - paidAmount`; âm khi khách trả dư, đó là thông tin chứ không phải lỗi. */
+  outstandingAmount: number;
+  costTotal: number;
+  paymentStatus: BookingPaymentStatus;
+}
+
+/**
+ * Nửa **chỉ CMS** của một dòng. Không bao giờ trộn vào `booking`: nửa kia là hợp đồng của tenant.
+ *
+ * Backend đánh `@JsonInclude(NON_NULL)` nên trường null biến mất khỏi payload; mọi chỗ đọc phải
+ * kiểm tra bằng truthy chứ đừng so `=== null`.
+ */
+export interface AdminBookingMeta {
+  /** Lặp lại từ `booking` để dòng đã tombstone vẫn địa chỉ hóa được. */
+  id: string;
+  rawId: number;
+  rawBranchId: number;
+  rawRoomId: number | null;
+  rawShiftId: number | null;
+  rawClientId: number;
+  rawCreatedByMembershipId: number | null;
+  totals: AdminBookingTotals;
+  /**
+   * Đóng dấu một lần lúc khách chốt, không bao giờ đóng lại, nên doanh thu đã ký không thể bị đẩy
+   * sang tháng khác bằng cách bật tắt trạng thái. Booking đã qua `pending_confirm` mà `confirmedAt`
+   * null là một bug nhìn thấy được từ đây.
+   */
+  confirmedAt: string | null;
+  completedAt: string | null;
+  /** Khóa rollup, mỗi cái là ngày đầu một tháng: suy từ `startAt` / `confirmedAt` / `completedAt`. */
+  revenueMonth: string | null;
+  signedMonth: string | null;
+  recognitionMonth: string | null;
+  /** Chỉ có khi request truyền `includeDeleted=true` **và** dòng này đúng là một tombstone. */
+  deletedAt?: string;
+  deletedByMembershipId?: string;
+  rawDeletedByMembershipId?: number;
+}
+
+/**
+ * GET /api/admin/workspaces/{id}/bookings → PageResponse<AdminBookingRow>, mỗi dòng hai nửa.
+ *
+ * `booking` là `BookingResponse` của tenant **nguyên văn**; `null` với booking đã xóa mềm vì cả cây
+ * con đã tombstone, không còn gì để dựng. `admin` là overlay chỉ CMS mới thấy.
+ */
+export interface AdminBookingRow {
+  booking: BookingResponse | null;
+  admin: AdminBookingMeta;
+}
+
+/**
+ * GET /api/admin/workspaces/{id}/bookings/summary — đếm, và chỉ đếm.
+ *
+ * Bản trước còn mang khối `inconsistent`; bỏ theo ruling của owner ngày 2026-09-07 vì nó chạy bốn
+ * truy vấn con tương quan cho mỗi booking trên toàn cửa sổ. Endpoint này phải rẻ đủ để một màn hình
+ * cứ thế gọi.
+ */
+export interface AdminBookingSummary {
+  /** Booking còn sống có `startAt` rơi vào cửa sổ. */
+  total: number;
+  /** Booking đã tombstone trong cùng cửa sổ, đếm riêng, không bao giờ trộn vào `total`. */
+  deleted: number;
+  /** Trạng thái không có booking nào thì **vắng mặt**, không phải 0. */
+  byStatus: Partial<Record<BookingStatus, number>>;
+  /** Key là ngày đầu tháng `YYYY-MM-DD`; booking chưa suy ra tháng bị bỏ khỏi map. */
+  byRevenueMonth: Record<string, number>;
+  /** Booking còn sống mà không chỗ crew nào gọi tên người. */
+  unstaffed: number;
+}
+
+export interface AdminBookingListParams {
+  status?: BookingStatus;
+  /** ISO instant trên `startAt`: `from` bao gồm, `to` loại trừ. */
+  from?: string;
+  to?: string;
+  /**
+   * Tên khách, số điện thoại, hoặc mã booking. Toàn chữ số và không bắt đầu bằng 0 thì backend hiểu
+   * là id; còn lại khớp tên/điện thoại. Đúng luật danh sách booking của tenant dùng.
+   */
+  search?: string;
+  includeDeleted?: boolean;
+  /** `createdAt,desc` (mặc định), `startAt,asc|desc` hoặc `status,asc`. */
+  sort?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface AdminBookingSummaryParams {
+  from?: string;
+  to?: string;
 }
 
 // ─── Plans (catalog) ─────────────────────────────────────────────────────────

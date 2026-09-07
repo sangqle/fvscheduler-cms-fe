@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { ArrowLeft, Copy, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { useToast } from '@/components/ui/ToastProvider';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { ErrorState, NotFoundState, isNotFound } from '@/components/admin/shared/QueryState';
 import { WorkspaceDetailSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { OverviewTab } from '@/components/admin/workspaces/OverviewTab';
+import { BookingTab } from '@/components/admin/workspaces/BookingTab';
 import { MembersTab } from '@/components/admin/workspaces/MembersTab';
 import { HistoryTab } from '@/components/admin/workspaces/HistoryTab';
 import { useAdminWorkspace } from '@/hooks/useAdminWorkspaces';
@@ -17,7 +18,7 @@ import { useReturnHref, useUrlState } from '@/hooks/useUrlState';
 import { SUBSCRIPTION_STATUS, WORKSPACE_TYPE } from '@/lib/admin/labels';
 import { formatDateTime, shortId } from '@/lib/utils';
 
-const TABS = ['overview', 'members', 'history'] as const;
+const TABS = ['overview', 'booking', 'members', 'history'] as const;
 type Tab = (typeof TABS)[number];
 
 /** CMS-02..04: chi tiết workspace, tab sống trên `?tab=`. */
@@ -95,11 +96,18 @@ export function WorkspaceDetailScreen({ workspaceId }: { workspaceId: string }) 
       <Tabs value={tab} onValueChange={(v) => set({ tab: v === 'overview' ? undefined : v })}>
         <TabsList>
           <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="booking">
+            Booking
+            <TabsCount>{ws.stats.bookings}</TabsCount>
+          </TabsTrigger>
           <TabsTrigger value="members">Thành viên</TabsTrigger>
           <TabsTrigger value="history">Lịch sử gói</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4">
           <OverviewTab ws={ws} />
+        </TabsContent>
+        <TabsContent value="booking" className="mt-4">
+          {tab === 'booking' && <BookingTab workspaceId={ws.id} />}
         </TabsContent>
         <TabsContent value="members" className="mt-4">
           {tab === 'members' && <MembersTab workspaceId={ws.id} />}
