@@ -656,3 +656,28 @@ export interface AdminMailMessageListParams {
   size?: number;
   sort?: string;
 }
+
+// ─── Tiện ích: giải mã id mờ ──────────────────────────────────────────────────
+
+/**
+ * POST /api/admin/ids/decode — thân request. 1..200 id, gửi **nguyên chuỗi** người vận hành dán
+ * vào, kể cả chuỗi rác: backend báo lỗi tại đúng dòng đó chứ không hỏng cả lô.
+ */
+export interface DecodeIdsInput {
+  ids: string[];
+}
+
+/**
+ * Một dòng kết quả, đúng thứ tự của `ids` gửi lên. Có `{ type, rawId }` HOẶC `error`, không bao
+ * giờ cả hai và không bao giờ thiếu cả hai.
+ */
+export interface AdminDecodedId {
+  /** Chuỗi gửi lên, backend echo lại để khớp kết quả theo vị trí. */
+  id: string;
+  /** Tên hằng `PublicIdType` (`WORKSPACE`, `BOOKING`, `CLIENT`…), KHÔNG phải tên bảng. */
+  type?: string;
+  /** Khóa số trong DB nền tảng. Endpoint không đụng repository nên id của bản ghi đã xóa vẫn ra số. */
+  rawId?: number;
+  /** Chỉ có khi id không giải mã được; luôn cùng một câu, cố tình không nói sai ở đâu. */
+  error?: string;
+}

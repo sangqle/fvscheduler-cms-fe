@@ -9,6 +9,11 @@ export interface TextareaProps
   showCount?: boolean;
   /** Tự giãn chiều cao theo nội dung, không sinh thanh cuộn. `rows` thành sàn chứ không phải trần. */
   autoResize?: boolean;
+  /**
+   * Chữ mono cho ô nhập dữ liệu máy đọc (id mờ, mã, khóa): một cột chữ đều bề ngang thì mắt bắt
+   * được ký tự lệch, còn `l`/`1` và `O`/`0` không lẫn vào nhau lúc dò một id dán sai.
+   */
+  mono?: boolean;
 }
 
 // `useLayoutEffect` cảnh báo khi chạy trên server. Primitive này nằm trong form phía client,
@@ -18,7 +23,7 @@ const useIsomorphicLayoutEffect =
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
-    { className, error, showCount, autoResize, maxLength, value, defaultValue, onChange, ...props },
+    { className, error, showCount, autoResize, mono, maxLength, value, defaultValue, onChange, ...props },
     ref,
   ) => {
     const innerRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -82,6 +87,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           'flex min-h-20 w-full resize-none rounded-lg border border-input bg-card px-3 py-2.5 text-base text-foreground transition-colors placeholder:text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm sm:placeholder:text-xs',
           error &&
             'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/15',
+          mono && 'font-mono tracking-tight',
           // Chừa chỗ cho bộ đếm, nếu không dòng cuối chui xuống dưới nó.
           showCount && 'pb-7',
           // Chiều cao do JS đặt; để `overflow` mặc định thì thanh cuộn kịp nháy một nhịp giữa hai

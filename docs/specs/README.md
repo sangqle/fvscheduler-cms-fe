@@ -8,6 +8,8 @@ Một file cho mỗi module CMS. Đọc trước khi sửa, cập nhật sau khi
 | Workspace: list, detail, grant/extend/cancel | [workspaces.md](./workspaces.md) | CMS-01..04, CMS-08 |
 | Đơn hàng: list, drawer, mark-paid | [orders.md](./orders.md) | CMS-05, 06, 08 |
 | Catalog gói | [plans.md](./plans.md) | CMS-07 |
+| Email hệ thống | [mail.md](./mail.md) | CMS-10..14 |
+| Tiện ích (giải mã id mờ) | [utils.md](./utils.md) | chưa có mockup |
 
 ## Khung xương lúc tải (dùng chung)
 
@@ -41,3 +43,7 @@ DB nền tảng mà `wk…` thì không join được với kết quả SQL. Hi�
 Gói, item catalog, template, chiến dịch và message **không** có: chúng khóa theo `code` chứ không
 theo id mờ. Membership dùng chung DTO với tenant nên backend cố tình không mang shape này sang.
 Hiển thị bằng `RawId` (`components/admin/shared/RawId.tsx`), không tự vẽ lại.
+
+Id mờ nào **không** có khóa số đi kèm sẵn thì tra ở `/utils` (`POST /api/admin/ids/decode`, xem
+[utils.md](./utils.md)): dán id, nhận `PublicIdType` + `rawId`. Chiều ngược lại (số → id mờ) không
+có endpoint nào.

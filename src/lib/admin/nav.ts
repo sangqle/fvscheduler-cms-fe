@@ -1,4 +1,4 @@
-import { Building2, Mail, Package, Receipt, type LucideIcon } from 'lucide-react';
+import { Building2, Mail, Package, Receipt, Wrench, type LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -6,12 +6,13 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-/** Các khu vực của CMS v1 (thiết kế CMS-01..07) cộng email hệ thống. */
+/** Các khu vực của CMS v1 (thiết kế CMS-01..07), email hệ thống và hộp công cụ vận hành. */
 export const NAV_ITEMS: NavItem[] = [
   { href: '/workspaces', label: 'Workspace', icon: Building2 },
   { href: '/orders', label: 'Đơn hàng', icon: Receipt },
   { href: '/plans', label: 'Catalog gói', icon: Package },
   { href: '/mail', label: 'Email hệ thống', icon: Mail },
+  { href: '/utils', label: 'Tiện ích', icon: Wrench },
 ];
 
 /**
