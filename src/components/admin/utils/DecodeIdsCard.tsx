@@ -38,8 +38,10 @@ export function DecodeIdsCard() {
   const results = decode.data ?? [];
   const decoded = results.filter((r) => r.rawId != null);
   const failed = results.length - decoded.length;
-  // Sau lần bấm đầu tiên thì khối kết quả ở lại: đang tải là khung xương, lỗi tải là `ErrorState`.
-  const showResults = decode.isPending || decode.isSuccess || decode.isError;
+  // Sau lần bấm đầu tiên thì khối kết quả ở lại, đang tải thì là khung xương.
+  const showResults = decode.isPending || decode.isSuccess;
+  /** Lô đã gửi ở lượt gần nhất, để "Thử lại" chạy lại đúng nó chứ không phải ô nhập hiện tại. */
+  const lastBatch = decode.variables;
 
   async function copy(text: string, title: string) {
     try {
@@ -157,29 +159,37 @@ export function DecodeIdsCard() {
           </Text>
         </div>
 
-        {showResults && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Text variant="caption" muted>
-                {decode.isPending
-                  ? 'Đang giải mã…'
-                  : `${results.length} id · ${decoded.length} ra khóa số${failed ? ` · ${failed} không hợp lệ` : ''}`}
-              </Text>
-              {decoded.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  // Dạng dán thẳng vào `WHERE id IN (…)`, thứ người vận hành làm ngay sau đó.
-                  onClick={() => void copy(decoded.map((r) => r.rawId).join(', '), `Đã chép ${decoded.length} rawId`)}
-                >
-                  <Copy className="size-4" />
-                  Chép {decoded.length} rawId
-                </Button>
-              )}
-            </div>
-            {decode.isError ? (
-              <ErrorState error={decode.error} onRetry={submit} />
-            ) : (
+        {decode.isError ? (
+          // Nhánh lỗi thay CẢ khối kết quả, không chỉ cái bảng: cuộc gọi hỏng thì không có số nào
+          // để tổng kết, mà một dòng "0 id · 0 ra khóa số" đứng trên hộp lỗi lại đọc như kết luận
+          // của backend rằng không id nào ra được số.
+          <ErrorState
+            error={decode.error}
+            // Thử lại đúng lô đã hỏng, không phải nội dung ô nhập lúc bấm: người dùng có thể vừa
+            // sửa ô nhập trong lúc đọc lỗi, và một hộp lỗi thì phải thử lại chính thứ đã lỗi.
+            onRetry={lastBatch ? () => decode.mutate(lastBatch) : undefined}
+          />
+        ) : (
+          showResults && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Text variant="caption" muted>
+                  {decode.isPending
+                    ? 'Đang giải mã…'
+                    : `${results.length} id · ${decoded.length} ra khóa số${failed ? ` · ${failed} không hợp lệ` : ''}`}
+                </Text>
+                {decoded.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    // Dạng dán thẳng vào `WHERE id IN (…)`, thứ người vận hành làm ngay sau đó.
+                    onClick={() => void copy(decoded.map((r) => r.rawId).join(', '), `Đã chép ${decoded.length} rawId`)}
+                  >
+                    <Copy className="size-4" />
+                    Chép {decoded.length} rawId
+                  </Button>
+                )}
+              </div>
               <DataTable
                 columns={columns}
                 data={results}
@@ -191,8 +201,8 @@ export function DecodeIdsCard() {
                 emptyMessage="Chưa giải mã id nào"
                 mobileCards
               />
-            )}
-          </div>
+            </div>
+          )
         )}
       </CardContent>
     </Card>

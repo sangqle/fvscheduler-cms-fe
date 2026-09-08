@@ -30,9 +30,10 @@ src/app/(admin)/workspaces, [workspaceId]     # CMS-01..04
 src/app/(admin)/orders                        # CMS-05/06 (?code= mở drawer, ?workspaceId= lọc)
 src/app/(admin)/plans, [planCode]             # CMS-07 (?tab=plans|items|vocabulary)
 src/app/(admin)/mail, templates/[code], campaigns/[campaignCode]  # CMS-10..14 (?tab=templates|campaigns|messages)
+src/app/(admin)/utils                         # tiện ích vận hành (giải mã id mờ → rawId)
 src/app/forbidden                             # 403 allowlist
 src/components/ui/                            # primitives (KHÔNG style tại feature)
-src/components/admin/{layout,shared,workspaces,orders,plans,mail}/
+src/components/admin/{layout,shared,workspaces,orders,plans,mail,utils}/
 src/hooks/useAdmin*.ts                        # TanStack hooks, query key ở đầu mỗi file
 src/hooks/useUrlState.ts                      # filter/phân trang sống trên URL
 src/lib/api/http.ts                           # apiFetch duy nhất (envelope, ApiError, 401/429 events)

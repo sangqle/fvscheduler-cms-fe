@@ -21,8 +21,12 @@ tại không, tên bảng SQL đi kèm mỗi loại, lịch sử các lần đã
   URL (xem "Rule FE phải giữ"). Vì không đọc `useSearchParams`, `page.tsx` không cần bọc `Suspense`
   như các route khác.
 - Trạng thái: chưa chạy (chỉ có ô nhập) · pending (nút `Spinner` + disabled, bảng ở chế độ
-  `isLoading`) · lỗi tải (`ErrorState` kèm "Thử lại") · id sai **không** phải trạng thái lỗi mà là
-  một dòng trong bảng.
+  `isLoading`) · lỗi tải (`ErrorState` thay **cả** khối kết quả, kể cả dòng tổng kết: hỏng thì
+  không có số nào để tổng kết, mà "0 id · 0 ra khóa số" đứng trên hộp lỗi đọc như kết luận của
+  backend) · id sai **không** phải trạng thái lỗi mà là một dòng trong bảng.
+- "Thử lại" chạy lại đúng lô đã hỏng (`decode.variables`), không phải nội dung ô nhập lúc bấm:
+  người dùng có thể vừa sửa ô nhập trong lúc đọc lỗi, và nút của một hộp lỗi thì phải thử lại
+  chính thứ đã lỗi.
 
 ### `DecodeIdsCard`
 - Ô nhập: `Textarea mono` (prop `mono` thêm vào primitive cho ô dữ liệu máy đọc), `Ctrl/⌘ + Enter`
