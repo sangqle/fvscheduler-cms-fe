@@ -9,6 +9,7 @@ import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { FilterSelect } from '@/components/admin/shared/FilterSelect';
 import { ErrorState } from '@/components/admin/shared/QueryState';
 import { ReadOnlyHint } from '@/components/admin/shared/ReadOnlyHint';
+import { MembersTabSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { useAdminMemberships } from '@/hooks/useAdminWorkspaces';
 import { MEMBERSHIP_STATUS } from '@/lib/admin/labels';
 import { formatDate, shortId } from '@/lib/utils';
@@ -86,6 +87,7 @@ export function MembersTab({ workspaceId }: { workspaceId: string }) {
   const query = useAdminMemberships(workspaceId, { status: status || undefined, page, size });
 
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <MembersTabSkeleton />;
 
   return (
     <div className="flex flex-col gap-3">

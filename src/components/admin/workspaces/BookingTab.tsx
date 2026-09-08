@@ -17,6 +17,7 @@ import { ReadOnlyHint } from '@/components/admin/shared/ReadOnlyHint';
 import { BookingDrawer } from '@/components/admin/workspaces/BookingDrawer';
 import { BookingSummaryStrip } from '@/components/admin/workspaces/BookingSummaryStrip';
 import { BookingTable } from '@/components/admin/workspaces/BookingTable';
+import { BookingTabSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { useAdminBookings, useAdminBookingSummary } from '@/hooks/useAdminBookings';
 import { toInt, useUrlState } from '@/hooks/useUrlState';
 import { BOOKING_SORT_OPTIONS, BOOKING_STATUS_LABEL } from '@/lib/admin/labels';
@@ -164,6 +165,11 @@ export function BookingTab({ workspaceId }: { workspaceId: string }) {
   }));
 
   const neverHadBooking = !filtered && !list.isPending && rows.length === 0;
+
+  // Lượt đầu vào tab: đợi cả hai truy vấn rồi hiện một lần, thay vì để dải tóm tắt, hàng lọc và
+  // bảng nhỏ giọt ra ba nhịp. Truy vấn nào lỗi thì `isPending` cũng tắt nên không kẹt ở đây; sau
+  // lượt đầu `keepPreviousData` giữ dữ liệu cũ nên đổi bộ lọc không rơi lại vào nhánh này.
+  if (list.isPending || summary.isPending) return <BookingTabSkeleton />;
 
   return (
     <div className="flex flex-col gap-4">

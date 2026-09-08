@@ -3,9 +3,9 @@
 import { TriangleAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/admin/shared/QueryState';
+import { BookingSummarySkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import {
   BOOKING_LIFECYCLE,
   BOOKING_STATUS_LABEL,
@@ -99,18 +99,7 @@ export function BookingSummaryStrip({
     );
   }
 
-  if (isPending || !summary) {
-    return (
-      <Card>
-        <div className="grid grid-cols-2 gap-5 p-4 sm:grid-cols-3 lg:grid-cols-[repeat(3,auto)_minmax(0,1fr)]">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-14 w-28" />
-          ))}
-          <Skeleton className="h-14 w-full" />
-        </div>
-      </Card>
-    );
-  }
+  if (isPending || !summary) return <BookingSummarySkeleton />;
 
   const months = Object.keys(summary.byRevenueMonth).sort();
   const monthMax = Math.max(1, ...months.map((m) => summary.byRevenueMonth[m]));

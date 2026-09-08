@@ -6,6 +6,7 @@ import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { Text } from '@/components/ui/Text';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { ErrorState } from '@/components/admin/shared/QueryState';
+import { HistoryTabSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { useAdminSubscriptionHistory } from '@/hooks/useAdminSubscriptions';
 import { SUBSCRIPTION_DB_STATUS, SUBSCRIPTION_SOURCE, SUBSCRIPTION_STATUS } from '@/lib/admin/labels';
 import { formatDateTime } from '@/lib/utils';
@@ -61,6 +62,7 @@ const columns: ColumnDef<AdminSubscriptionRow>[] = [
 export function HistoryTab({ workspaceId }: { workspaceId: string }) {
   const query = useAdminSubscriptionHistory(workspaceId);
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <HistoryTabSkeleton />;
   const rows = query.data ?? [];
   return (
     <div className="flex flex-col gap-3">

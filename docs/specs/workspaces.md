@@ -87,6 +87,13 @@ Trạng thái mọi màn: loading = khung xương khớp bố cục (`loading.ts
 dùng chung component ở `WorkspaceSkeletons.tsx`, xem [README](./README.md)) · empty = `EmptyState` · error =
 `ErrorState` · 404 = `NotFoundState` · pending khi ghi = nút disabled + `Spinner`.
 
+**Chuyển tab cũng phải có khung xương.** Booking / Thành viên / Lịch sử gói chỉ mount khi được chọn
+và mỗi tab tự gọi API của mình, nên mỗi lần bấm sang là một lượt tải mới: dùng `BookingTabSkeleton`
+· `MembersTabSkeleton` · `HistoryTabSkeleton` ở nhánh `isPending` của từng tab. Tab Booking đợi
+**cả hai** truy vấn (danh sách + summary) rồi hiện một lần, thay vì để dải tóm tắt, hàng lọc và
+bảng nhỏ giọt ra ba nhịp. Header và dải tab nằm ngoài, chúng đã tải xong nên không được nháy lại;
+sau lượt đầu `keepPreviousData` giữ dữ liệu cũ nên đổi bộ lọc không rơi lại vào khung xương.
+
 ## Hooks ↔ API
 
 | Hook | Method · path | Query key | Invalidate sau ghi |
