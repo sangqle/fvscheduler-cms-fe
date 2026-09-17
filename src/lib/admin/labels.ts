@@ -1,5 +1,8 @@
 import type { BadgeVariant } from '@/components/ui/Badge';
 import type {
+  AdminAffiliateCommissionRow,
+  AffiliateCommissionStatus,
+  AffiliatePayoutStatus,
   BillingPeriod,
   GrantSource,
   MailCampaignStatus,
@@ -266,4 +269,68 @@ export const BOOKING_SORT_OPTIONS = [
   { value: 'startAt,desc', label: 'Ngày chụp, muộn nhất' },
   { value: 'startAt,asc', label: 'Ngày chụp, sớm nhất' },
   { value: 'status,asc', label: 'Trạng thái' },
+];
+
+// ─── Tiếp thị liên kết (affiliate) ────────────────────────────────────────────
+
+/** `REQUESTED` vàng vì là hàng đợi admin phải xử lý; `PAID`/`REJECTED` là hai điểm cuối. */
+export const AFFILIATE_PAYOUT_STATUS: Record<AffiliatePayoutStatus, EnumMeta> = {
+  REQUESTED: { label: 'REQUESTED', variant: 'warning' },
+  PAID: { label: 'PAID', variant: 'success' },
+  REJECTED: { label: 'REJECTED', variant: 'destructive' },
+};
+
+export const AFFILIATE_COMMISSION_STATUS: Record<AffiliateCommissionStatus, EnumMeta> = {
+  EARNED: { label: 'EARNED', variant: 'success' },
+  VOIDED: { label: 'VOIDED', variant: 'muted' },
+};
+
+/**
+ * Chặng của một dòng hoa hồng, suy ra lúc đọc từ `status` + `payoutId` + `availableAt`. Dòng admin
+ * không mang trạng thái của yêu cầu rút nên `IN_PAYOUT` gộp cả yêu cầu đang chờ lẫn đã trả: muốn
+ * biết là loại nào thì mở yêu cầu đó. Chú thích chặng mang ngày, id và lý do hủy nên dựng tại
+ * `StageCaption` (`CommissionTable.tsx`), không có bảng nhãn phẳng.
+ */
+export type AffiliateCommissionStage = 'VOIDED' | 'IN_PAYOUT' | 'HOLDING' | 'AVAILABLE';
+
+export function affiliateCommissionStage(
+  row: Pick<AdminAffiliateCommissionRow, 'status' | 'payoutId' | 'availableAt'>,
+  now: number = Date.now(),
+): AffiliateCommissionStage {
+  if (row.status === 'VOIDED') return 'VOIDED';
+  if (row.payoutId) return 'IN_PAYOUT';
+  return new Date(row.availableAt).getTime() > now ? 'HOLDING' : 'AVAILABLE';
+}
+
+/**
+ * Điều kiện **hủy hoa hồng**: backend từ chối (409) dòng đã hủy và dòng đã bị bất kỳ yêu cầu rút nào
+ * gom, kể cả yêu cầu đã trả. Dòng trong yêu cầu đang chờ thì phải từ chối yêu cầu đó trước.
+ */
+export function isCommissionVoidable(row: Pick<AdminAffiliateCommissionRow, 'status' | 'payoutId'>): boolean {
+  return row.status === 'EARNED' && !row.payoutId;
+}
+
+/** Chu kỳ trên dòng hoa hồng là chuỗi ảnh chụp, giá trị lạ thì in nguyên văn. */
+export function billingPeriodLabel(value: string): string {
+  return BILLING_PERIOD[value as BillingPeriod] ?? value;
+}
+
+/** Basis point → phần trăm kiểu Việt: `1500 → "15%"`, `1250 → "12,5%"`. */
+export function formatBasisPoints(bp: number): string {
+  return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(bp / 100)}%`;
+}
+
+export const AFFILIATE_PAYOUT_STATUS_OPTIONS: { value: AffiliatePayoutStatus | ''; label: string }[] = [
+  { value: '', label: 'Tất cả' },
+  { value: 'REQUESTED', label: 'REQUESTED' },
+  { value: 'PAID', label: 'PAID' },
+  { value: 'REJECTED', label: 'REJECTED' },
+];
+
+/** Backend chỉ nhận `createdAt`, `commissionAmount`, `availableAt`; key khác bị `AdminSort` gạt bỏ. */
+export const AFFILIATE_COMMISSION_SORT_OPTIONS = [
+  { value: 'createdAt,desc', label: 'Ghi nhận, mới nhất' },
+  { value: 'createdAt,asc', label: 'Ghi nhận, cũ nhất' },
+  { value: 'commissionAmount,desc', label: 'Hoa hồng, cao nhất' },
+  { value: 'availableAt,asc', label: 'Khả dụng, sớm nhất' },
 ];

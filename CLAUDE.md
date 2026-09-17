@@ -30,10 +30,11 @@ src/app/(admin)/workspaces, [workspaceId]     # CMS-01..04
 src/app/(admin)/orders                        # CMS-05/06 (?code= mở drawer, ?workspaceId= lọc)
 src/app/(admin)/plans, [planCode]             # CMS-07 (?tab=plans|items|vocabulary)
 src/app/(admin)/mail, templates/[code], campaigns/[campaignCode]  # CMS-10..14 (?tab=templates|campaigns|messages)
+src/app/(admin)/affiliate                     # chưa có mã CMS (?tab=payouts|commissions|rates)
 src/app/(admin)/utils                         # tiện ích vận hành (giải mã id mờ → rawId)
 src/app/forbidden                             # 403 allowlist
 src/components/ui/                            # primitives (KHÔNG style tại feature)
-src/components/admin/{layout,shared,workspaces,orders,plans,mail,utils}/
+src/components/admin/{layout,shared,workspaces,orders,plans,mail,affiliate,utils}/
 src/hooks/useAdmin*.ts                        # TanStack hooks, query key ở đầu mỗi file
 src/hooks/useUrlState.ts                      # filter/phân trang sống trên URL
 src/lib/api/http.ts                           # apiFetch duy nhất (envelope, ApiError, 401/429 events)
@@ -83,6 +84,10 @@ docs/specs/                                   # spec ngắn mỗi module: màn h
   lưu); xem trước chỉ render bản đã lưu; chiến dịch ghim version lúc tạo và gửi tới chủ workspace
   hoặc tài khoản; message không có id; 422 trả danh sách lỗi trong `data`. Chi tiết ở
   `docs/specs/mail.md`.
+- Affiliate ghi được: mark-paid/reject một yêu cầu rút chỉ khi còn `REQUESTED`; void một dòng hoa
+  hồng chỉ khi chưa thuộc yêu cầu rút nào; `PUT` tỷ lệ theo gói là upsert, không viết lại hoa hồng
+  cũ (ảnh chụp lúc ghi nhận); khóa/mở mã giới thiệu không đọc được trạng thái hiện tại. Chi tiết ở
+  `docs/specs/affiliate.md`.
 
 ## Workflow
 

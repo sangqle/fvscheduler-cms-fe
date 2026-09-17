@@ -681,3 +681,129 @@ export interface AdminDecodedId {
   /** Chỉ có khi id không giải mã được; luôn cùng một câu, cố tình không nói sai ở đâu. */
   error?: string;
 }
+
+// ─── Tiếp thị liên kết (affiliate) ────────────────────────────────────────────
+
+/** `affiliate_payout.status`: chỉ `REQUESTED` mới đánh dấu đã trả hoặc từ chối được (409 nếu khác). */
+export type AffiliatePayoutStatus = 'REQUESTED' | 'PAID' | 'REJECTED';
+/** `affiliate_commission.status` lưu DB. Khả dụng / đang giữ / đang trong yêu cầu rút là trạng thái suy ra, không lưu. */
+export type AffiliateCommissionStatus = 'EARNED' | 'VOIDED';
+
+/**
+ * Một dòng `GET /api/admin/affiliate/payouts`, cũng là thân trả về của mark-paid và reject.
+ * Ba trường ngân hàng là **ảnh chụp lúc người giới thiệu gửi yêu cầu**, sửa ngân hàng sau đó không
+ * đổi chỗ tiền phải chuyển tới. Không có endpoint GET một yêu cầu theo id.
+ */
+export interface AdminAffiliatePayoutRow {
+  /** Id mờ `ap…`. */
+  id: string;
+  /** Id mờ `ac…` của người giới thiệu, dùng cho lọc hoa hồng và khóa/mở mã. */
+  referrerAccountId: string;
+  referrerEmail: string | null;
+  amount: number;
+  /**
+   * Số dòng hoa hồng đang mang `payoutId` của yêu cầu này, đếm sống lúc đọc (`countByPayoutId`).
+   * Từ chối gỡ `payoutId` khỏi các dòng đó, nên dòng `REJECTED` trong `GET /payouts` luôn ra 0; chỉ
+   * thân trả về của POST reject mang số đã gom trước lúc từ chối.
+   */
+  commissionCount: number;
+  status: AffiliatePayoutStatus;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountHolder: string;
+  /** Mã giao dịch chuyển khoản admin nhập lúc đánh dấu đã trả. */
+  reference: string | null;
+  /** Ghi chú lúc đánh dấu đã trả, hoặc lý do từ chối. */
+  note: string | null;
+  processedAt: string | null;
+  /** Id mờ `ac…` của admin đã xử lý; backend không kèm email. */
+  processedBy: string | null;
+  createdAt: string;
+}
+
+/**
+ * Một dòng `GET /api/admin/affiliate/commissions`, cũng là thân trả về của void. Khác trang của người
+ * giới thiệu: dòng admin mang `status` thô và `payoutId` thô chứ không có trạng thái hiển thị gộp.
+ * Mọi trường hiển thị là ảnh chụp lúc ghi nhận hoa hồng, không join sống sang đơn hàng.
+ */
+export interface AdminAffiliateCommissionRow {
+  /** Id mờ `af…`. */
+  id: string;
+  referrerAccountId: string;
+  referrerEmail: string | null;
+  createdAt: string;
+  /** Tên workspace của khách đã che bớt (`Nguyễn Thu H.`). */
+  customerDisplayName: string;
+  planCode: string;
+  /** Chuỗi ảnh chụp (`MONTH`/`YEAR`), cố tình không phải enum sống. */
+  billingPeriod: string;
+  /** Số khách thực trả, đã trừ chiết khấu. */
+  paidAmount: number;
+  commissionRateBp: number;
+  commissionAmount: number;
+  /** Hết thời gian giữ; trước mốc này dòng chưa rút được. */
+  availableAt: string;
+  status: AffiliateCommissionStatus;
+  /** Id mờ `ap…` của yêu cầu rút đang gom dòng này (REQUESTED hoặc PAID); null khi chưa gom. */
+  payoutId: string | null;
+  voidReason: string | null;
+  voidedAt: string | null;
+  voidedBy: string | null;
+}
+
+/** Một dòng `GET /api/admin/affiliate/rates` (mọi dòng, kể cả đang tắt), cũng là thân trả về của PUT. */
+export interface AdminAffiliateRate {
+  planCode: string;
+  /** Join từ catalog chỉ để hiển thị; null khi gói không còn trong catalog. */
+  planName: string | null;
+  /** Basis point: `1500` = 15%. */
+  commissionRateBp: number;
+  /** Basis point: `1000` = 10%. */
+  discountRateBp: number;
+  /** `false`: đơn mới không dùng được mã giới thiệu cho gói này. */
+  active: boolean;
+}
+
+/** Sort chỉ `createdAt` / `amount` / `status`, mặc định `createdAt,desc`. */
+export interface AffiliatePayoutListParams {
+  status?: AffiliatePayoutStatus;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+/** Sort chỉ `createdAt` / `commissionAmount` / `availableAt`, mặc định `createdAt,desc`. */
+export interface AffiliateCommissionListParams {
+  /** Id mờ `ac…`. */
+  referrerAccountId?: string;
+  /** Id mờ `ap…`. */
+  payoutId?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+/** POST …/payouts/{payoutId}/mark-paid: cả hai trường tùy chọn. */
+export interface MarkPayoutPaidInput {
+  /** Tối đa 120 ký tự. */
+  reference?: string;
+  /** Tối đa 400 ký tự. */
+  note?: string;
+}
+
+/** POST …/payouts/{payoutId}/reject: lý do 3..400 ký tự. */
+export interface RejectPayoutInput {
+  reason: string;
+}
+
+/** POST …/commissions/{commissionId}/void: lý do 3..400 ký tự. */
+export interface VoidCommissionInput {
+  reason: string;
+}
+
+/** PUT …/rates/{planCode}: upsert, basis point 0..10000. */
+export interface UpdateAffiliateRateInput {
+  commissionRateBp: number;
+  discountRateBp: number;
+  active: boolean;
+}
