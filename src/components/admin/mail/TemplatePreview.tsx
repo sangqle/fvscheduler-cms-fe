@@ -44,12 +44,13 @@ const FRAME_HEIGHT: Record<PreviewPane, string> = {
 };
 
 /**
- * Từ `xl` cột xem trước của `TemplateEditorScreen` đã cao đúng bằng màn hình ở cả hai kiểu, nên khung
- * thư nuốt phần cột còn thừa thay vì chốt số: chốt cao hơn cột thì phần thò ra khỏi khối dính không
- * cuộn tới được. `min-h-64` là sàn để nó không bị bóp còn vài pixel khi bảng biến tự do và cảnh báo
- * "chưa lưu" cùng bung ra, lúc đó `CardContent` cuộn chứ khung thư không co thêm.
+ * Từ `xl` cột xem trước của `TemplateEditorScreen` cao bằng cột soạn bên trái (hoặc bằng màn hình nếu
+ * cột soạn ngắn hơn), nên khung thư nuốt phần cột còn thừa thay vì chốt số: chốt cao hơn cột thì phần
+ * thò ra khỏi khối dính không cuộn tới được. `min-h-[32rem]` là sàn, cao hơn hẳn viền cũ (16rem) để
+ * khung thư vẫn chiếm phần lớn cột dù bảng biến tự do và cảnh báo "chưa lưu" cùng bung ra; lúc đó
+ * `CardContent` cuộn phần trên chứ khung thư không co thêm.
  */
-const FRAME_FILL = 'xl:h-auto xl:min-h-64 xl:flex-1';
+const FRAME_FILL = 'xl:h-auto xl:min-h-[32rem] xl:flex-1';
 
 /**
  * Nhịp chờ trước khi dựng lại bản nháp. Đủ ngắn để cảm giác là "theo kịp lúc gõ", đủ dài để một câu
@@ -341,11 +342,13 @@ export function TemplatePreview({
         )}
 
         {shown && !savedPending && (
-          // Khung giả lập hộp thư: 600px là bề ngang mọi trình đọc mail đều dựng được. Chuỗi
-          // `min-h-0` chạy suốt từ đây xuống khung thư: thiếu một mắt thôi là `min-height: auto`
-          // của flex item giữ nguyên chiều cao nội dung và `flex-1` không co lại được.
-          <div className="flex min-h-0 flex-col rounded-lg border border-border bg-muted p-3 xl:flex-1">
-            <div className="mx-auto flex min-h-0 w-full max-w-150 flex-1 flex-col">
+          // Khung giả lập hộp thư: 600px là bề ngang mọi trình đọc mail đều dựng được. Hai lớp bọc
+          // này KHÔNG `min-h-0`: khung thư bên trong đã tự có sàn `min-h-[32rem]`, nên lớp bọc phải
+          // cao ít nhất bằng sàn đó để viền/nền theo kịp nội dung, không thì khung thư tràn qua góc
+          // bo và đè lên chữ chú thích dưới `CardContent`. `CardContent` mới là nơi cuộn khi không
+          // đủ chỗ, nhờ `min-h-0` riêng của nó.
+          <div className="flex flex-col rounded-lg border border-border bg-muted p-3 xl:flex-1">
+            <div className="mx-auto flex w-full max-w-150 flex-1 flex-col">
               <div className="flex shrink-0 flex-col gap-0.5 rounded-t-lg border border-border bg-card px-3 py-2">
                 <Text variant="caption" muted>
                   Tiêu đề

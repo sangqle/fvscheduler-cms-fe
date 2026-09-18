@@ -679,14 +679,15 @@ export function TemplateEditorScreen({ code }: { code: string }) {
         {/*
           Cột xem trước dính lại trong lúc cột trái cuộn, chỉ từ `xl` vì dưới đó nó nằm dưới ô soạn chứ
           không cạnh. `top-14` (56px) nhét mép trên xuống dưới thanh công cụ cao 53px, chừa 3px để viền
-          trên và góc bo của thẻ không bị cắt cụt; `h-` trừ đi 137px = topbar 57px + 56px đó + đệm dưới
-          24px của `main`. `h-` chứ không `max-h-`: khung thư bên trong tràn theo chiều cao cột, mà một
-          cột `max-h-` vẫn cao theo nội dung nên không có con số nào để tràn theo. `self-start` để cột
-          không bị kéo cao bằng cột trái, nếu không thì `sticky` hết chỗ trống để trượt trong.
+          trên và góc bo của thẻ không bị cắt cụt. Không `h-`/`self-start` riêng: bỏ trống để
+          `align-items: stretch` mặc định của hàng kéo cột này cao bằng cột soạn bên trái (hoặc bằng
+          `min-h` của hàng nếu cột soạn ngắn hơn màn hình), thay vì chốt cứng theo `100dvh`. Cột soạn
+          càng dài (thân HTML nhiều dòng) thì khung thư xem trước càng có chỗ để cao theo, `CardContent`
+          của `TemplatePreview` vẫn cuộn riêng nếu email dài hơn cả chỗ đó.
         */}
         <div
           className={cn(
-            'min-w-0 xl:sticky xl:top-14 xl:h-[calc(100dvh-137px)] xl:flex-55 xl:self-start',
+            'min-w-0 xl:sticky xl:top-14 xl:flex-55',
             view === 'edit' && 'hidden',
           )}
         >
