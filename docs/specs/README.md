@@ -8,6 +8,7 @@ Một file cho mỗi module CMS. Đọc trước khi sửa, cập nhật sau khi
 | Workspace: list, detail, grant/extend/cancel | [workspaces.md](./workspaces.md) | CMS-01..04, CMS-08 |
 | Đơn hàng: list, drawer, mark-paid | [orders.md](./orders.md) | CMS-05, 06, 08 |
 | Catalog gói | [plans.md](./plans.md) | CMS-07 |
+| Tiếp thị liên kết: yêu cầu rút, hoa hồng, tỷ lệ | [affiliate.md](./affiliate.md) | chưa có mockup |
 | Email hệ thống | [mail.md](./mail.md) | CMS-10..14 |
 | Tiện ích (giải mã id mờ) | [utils.md](./utils.md) | chưa có mockup |
 
