@@ -641,6 +641,12 @@ export interface CreateCampaignResult {
   blankVariables: string[];
   /** Biến request truyền mà version không khai: bị bỏ, không bao giờ lưu, không đè được biến server tự tính. */
   ignoredVariables: string[];
+  /**
+   * Số workspace chưa có gói nào và vừa được kích hoạt dùng thử. Chỉ khác 0 với đúng một template
+   * (backend cấu hình, mặc định `trial-start`); mọi template khác không đụng tới subscription.
+   * Khi `dryRun` thì đây là số SẼ được kích hoạt, chưa ghi gì.
+   */
+  trialsGranted: number;
 }
 
 export interface CampaignActionResult {

@@ -163,7 +163,14 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
   mail kèm lý do (`WORKSPACE_NOT_FOUND`, `WORKSPACE_DELETED`, `NO_ACTIVE_OWNER`, `NO_EMAIL`,
   `DUPLICATE_OWNER` kèm `mergedIntoWorkspaceId`, `ACCOUNT_NOT_FOUND`); `SkippedBreakdown` trong
   dialog dựng khối này, vì bộ đếm chỉ nói "bao nhiêu" còn sau khi mail bay đi thì câu hỏi duy nhất
-  trả lời được là "id nào". Poll chi tiết mỗi 5 giây khi còn `pending + sending > 0`, dừng khi hết.
+  trả lời được là "id nào".
+- **Kích hoạt dùng thử theo template**: đúng MỘT template (backend cấu hình
+  `subscription.trial.campaign-template-code`, mặc định `trial-start`) vừa gửi mail vừa cấp gói
+  dùng thử cho những workspace chưa có gói nào. Không có cờ nào trên request bật tắt chuyện này,
+  FE không gửi gì thêm, chỉ đọc `trialsGranted` trong response. Workspace đã có gói, **kể cả gói đã
+  hết hạn**, không bị đụng tới. Việc cấp diễn ra lúc xếp hàng, trước khi mail rời đi, nên dialog
+  phải nói rõ ở cả bước chạy thử lẫn câu cảnh báo trước nút gửi: mail hỏng sau đó thì gói vẫn đã
+  cấp rồi. Poll chi tiết mỗi 5 giây khi còn `pending + sending > 0`, dừng khi hết.
 
 ## Types
 

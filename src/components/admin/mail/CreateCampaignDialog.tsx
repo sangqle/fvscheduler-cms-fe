@@ -252,7 +252,9 @@ export function CreateCampaignDialog({
       onSuccess: (result) => {
         showToast({
           title: `Đã xếp hàng ${result.queued} mail`,
-          description: `Chiến dịch chạy ${result.templateCode} v${result.templateVersion}, đã ghim version này.`,
+          description: result.trialsGranted > 0
+            ? `Chiến dịch chạy ${result.templateCode} v${result.templateVersion}, đã ghim version này. Đã cấp gói dùng thử cho ${result.trialsGranted} workspace.`
+            : `Chiến dịch chạy ${result.templateCode} v${result.templateVersion}, đã ghim version này.`,
           variant: 'success',
         });
         onOpenChange(false);
@@ -616,6 +618,16 @@ export function CreateCampaignDialog({
                     </Alert>
                   )}
 
+                  {ready.trialsGranted > 0 && (
+                    <Alert variant="info">
+                      <AlertDescription>
+                        Template này kích hoạt dùng thử: {ready.trialsGranted} workspace chưa có gói
+                        nào sẽ được cấp gói dùng thử ngay khi bạn xếp hàng gửi, trước khi mail rời đi.
+                        Workspace đã có gói, kể cả gói đã hết hạn, không bị đụng tới.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <SkippedBreakdown skipped={ready.skipped} />
 
                   {ready.ignoredVariables.length > 0 && (
@@ -640,6 +652,9 @@ export function CreateCampaignDialog({
                     Xếp hàng gửi {ready.queued} mail bằng template {templateName}
                     {version ? ` v${version}` : ''}. Mail đã gửi không thể rút lại; bạn chỉ có thể hủy phần
                     chưa gửi.
+                    {ready.trialsGranted > 0
+                      ? ` Kèm theo đó, ${ready.trialsGranted} workspace được cấp gói dùng thử, và việc này xảy ra kể cả khi mail sau đó gửi hỏng.`
+                      : ''}
                   </AlertDescription>
                 </Alert>
               )}
