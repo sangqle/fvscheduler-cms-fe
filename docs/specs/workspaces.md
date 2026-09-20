@@ -1,6 +1,6 @@
 # Workspaces
 
-Updated: 2026-09-08 · Thiết kế: CMS-01..04, CMS-08 · Backend: `ADM-FLOW-02, 03, 05, 06`
+Updated: 2026-09-20 · Thiết kế: CMS-01..04, CMS-08 · Backend: `ADM-FLOW-02, 03, 05, 06`
 
 ## Mục đích
 
@@ -13,16 +13,22 @@ chỉ đọc.
 ### `/workspaces` (CMS-01)
 - `WorkspaceListScreen` → `WorkspaceFilters` + `WorkspaceTable` (DataTable, phân trang server).
 - Hàng lọc một dòng (`flex-wrap`): ô tìm co giãn · `FilterSelect` Loại / Trạng thái gói / Gói (rộng
-  theo nội dung, dấu check bên phải theo convention `Select`) · nút Xóa bộ lọc khi đang lọc · ghi chú
-  "không có thao tác ghi" đẩy sát phải. Sắp xếp là `WorkspaceSortControl` trong `PageHeader actions`.
+  theo nội dung, dấu check bên phải theo convention `Select`) · nút Xóa bộ lọc khi đang lọc. Sắp xếp là `WorkspaceSortControl` trong `PageHeader actions`.
 - URL: `?q=&type=&subscriptionStatus=&planCode=&sort=createdAt,desc|name,asc&page=&size=15`
   (`useUrlState`; đổi filter reset `page`). Ô tìm debounce 300ms.
-- Cột: `rawId` (khóa số của `workspace.id`, `RawId`, luôn đứng đầu) · Workspace (tên, loại, id
+- Cột: ô tích chọn · `rawId` (khóa số của `workspace.id`, `RawId`) · Workspace (tên, loại, id
   ngắn) · Chủ sở hữu (tên, email hoặc "Chưa có tài khoản đăng
   nhập") · TV · CN · Gói hiện tại (tên + badge nguồn + mã, hoặc "Chưa từng có gói") · Trạng thái ·
   Hết hạn (giờ + "còn/quá N ngày", đỏ khi quá, cam ≤ 7 ngày) · Tạo lúc.
 - Click hàng → `/workspaces/{id}?from=<query hiện tại đã encode>` (`detailHref`), để nút quay lại ở
   chi tiết trả đúng trang/bộ lọc đang xem. Rỗng sau lọc → `EmptyState` + "Xóa bộ lọc" (ghi chú PAST_DUE).
+- **Gửi mail hàng loạt** (thao tác ghi duy nhất của màn này): tích các hàng rồi bấm "Gửi email (N)"
+  trên thanh hiện ra giữa bộ lọc và bảng, mở `CreateCampaignDialog` với `initialWorkspaceIds`. Mail
+  đi tới **chủ sở hữu** của từng workspace, một tài khoản đứng tên nhiều workspace chỉ nhận một mail.
+  Ô tích của hàng và của đầu bảng đều `stopPropagation`, nếu không thì mỗi lần chọn là điều hướng
+  sang trang chi tiết. Lựa chọn **sống xuyên trang và xuyên bộ lọc** vì cách dùng thật là lọc nhiều
+  đợt rồi gửi một lần; đổi lại thanh luôn hiện số đang chọn kèm nút "Bỏ chọn", để không gửi nhầm
+  những id đã tích dưới một bộ lọc không còn thấy trên màn hình.
 
 ### `/workspaces/[workspaceId]` (CMS-02..04)
 - `WorkspaceDetailScreen`: header (back về `useReturnHref('/workspaces')`, tức `?from=` nếu vào từ

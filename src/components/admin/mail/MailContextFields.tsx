@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/Input';
 
 /**
  * Ô nhập giá trị cho **biến tự do** của một template, dùng chung cho gửi thử và tạo chiến dịch.
- * Danh sách ô sinh từ `customVariables` của version hiện hành, không có ô "thêm biến": backend
- * từ chối 422 cả khi thiếu lẫn khi thừa một khóa.
+ * Danh sách ô sinh từ `customVariables` của version hiện hành, không có ô "thêm biến": khóa nào
+ * version không khai thì backend bỏ qua, gửi lên cũng vô ích.
  */
 export function CustomVariableInputs({
   names,
@@ -37,14 +37,18 @@ export function CustomVariableInputs({
   );
 }
 
-/** Biến đã khai nhưng chưa có giá trị. Chiến dịch bắt buộc đủ, gửi thử thì không. */
+/**
+ * Biến đã khai nhưng chưa có giá trị. Không còn chặn gửi ở bên nào: backend lưu rỗng và render ra
+ * chỗ trống. Dùng để cảnh báo trước khi gửi, vì một mail thiếu chữ là thứ nên thấy trước lúc bấm.
+ */
 export function missingVariables(names: string[], values: Record<string, string>): string[] {
   return names.filter((name) => !(values[name] ?? '').trim());
 }
 
 /**
- * Body của `POST /campaigns`: đúng tập khóa mà version khai, không hơn không kém. Lấy từ `names`
- * chứ không từ `values` để giá trị còn sót lại của template chọn trước đó không lọt vào body.
+ * Body của `POST /campaigns`: đúng tập khóa mà version khai. Lấy từ `names` chứ không từ `values`
+ * để giá trị còn sót lại của template chọn trước đó không lọt vào body, nơi backend sẽ bỏ nó và
+ * báo lại trong `ignoredVariables`.
  */
 export function campaignVariables(
   names: string[],

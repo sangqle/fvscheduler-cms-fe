@@ -1,8 +1,10 @@
 'use client';
 
+import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SearchX, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
@@ -23,6 +25,40 @@ export function ExpiryCell({ iso }: { iso: string | null }) {
       <span className="font-mono text-xs">{formatDateTime(iso)}</span>
       <span className={cn('text-[11px] font-semibold', TONE_CLASS[expiryTone(iso)])}>{relativeDays(iso)}</span>
     </span>
+  );
+}
+
+/**
+ * Ô tích của một hàng. Chặn nổi bọt sự kiện vì hàng vốn đã click được để mở trang chi tiết: không
+ * chặn thì mỗi lần chọn một workspace là điều hướng đi mất, chọn xong không còn ở lại bảng nữa.
+ */
+function stopRowClick(e: React.MouseEvent) {
+  e.stopPropagation();
+}
+
+/** Ô tích đầu bảng: chọn hết trang hiện tại, ở trạng thái lưng chừng khi mới chọn một phần. */
+function SelectAllBox({
+  checked,
+  indeterminate,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Checkbox
+      ref={(node) => {
+        if (node) node.indeterminate = indeterminate;
+      }}
+      checked={checked}
+      disabled={disabled}
+      onClick={stopRowClick}
+      onChange={(e) => onChange(e.target.checked)}
+      aria-label="Chọn tất cả workspace trên trang này"
+    />
   );
 }
 
@@ -91,6 +127,9 @@ export function WorkspaceTable({
   onPageSizeChange,
   filtered,
   onClearFilters,
+  selectedIds,
+  onToggle,
+  onTogglePage,
 }: {
   page: PageResponse<AdminWorkspaceRow> | undefined;
   isLoading: boolean;
@@ -100,13 +139,50 @@ export function WorkspaceTable({
   onPageSizeChange: (s: number) => void;
   filtered: boolean;
   onClearFilters: () => void;
+  /** Id đang chọn, kể cả id thuộc trang khác: chọn không mất khi lật trang. */
+  selectedIds: ReadonlySet<string>;
+  onToggle: (id: string, checked: boolean) => void;
+  onTogglePage: (ids: string[], checked: boolean) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const rows = page?.content ?? [];
+  const pageIds = rows.map((w) => w.id);
+  const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length;
+
+  const allColumns = React.useMemo<ColumnDef<AdminWorkspaceRow>[]>(
+    () => [
+      {
+        id: 'select',
+        className: 'w-10',
+        header: (
+          <SelectAllBox
+            checked={pageIds.length > 0 && selectedOnPage === pageIds.length}
+            indeterminate={selectedOnPage > 0 && selectedOnPage < pageIds.length}
+            disabled={pageIds.length === 0}
+            onChange={(checked) => onTogglePage(pageIds, checked)}
+          />
+        ),
+        skeleton: <div className="size-4.5 animate-pulse rounded-md bg-muted" />,
+        cell: (w) => (
+          <Checkbox
+            checked={selectedIds.has(w.id)}
+            onClick={stopRowClick}
+            onChange={(e) => onToggle(w.id, e.target.checked)}
+            aria-label={`Chọn workspace ${w.name}`}
+          />
+        ),
+      },
+      ...columns,
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedIds, selectedOnPage, pageIds.join(','), onToggle, onTogglePage],
+  );
+
   return (
     <DataTable
-      columns={columns}
-      data={page?.content ?? []}
+      columns={allColumns}
+      data={rows}
       rowKey={(w) => w.id}
       isLoading={isLoading}
       skeletonRows={8}

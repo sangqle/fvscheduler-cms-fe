@@ -1,6 +1,6 @@
 # Mail: template + chiến dịch gửi
 
-Updated: 2026-09-06 · Thiết kế: CMS-10..14 · Backend: `../fvscheduler/docs/features/mail-module.md`
+Updated: 2026-09-20 · Thiết kế: CMS-10..14 · Backend: `../fvscheduler/docs/features/mail-module.md`
 
 ## Mục đích
 
@@ -33,8 +33,8 @@ cho nhật ký, nên chuyển tab không làm mất bộ lọc của tab kia.
   tại đã encode>` (`detailHref`) để nút quay lại về đúng tab và bộ lọc, thay vì `/mail` trơn.
 - **Tab Chiến dịch** → `CampaignTable` (props `values`, `onCreate`, `onClearFilters`). Lọc trạng
   thái chạy **tại client trên trang đang xem** vì endpoint không nhận bộ lọc nào. Nút "Tạo chiến dịch" mở
-  `CreateCampaignDialog` (nhận `initialTemplateCode` khi mở từ trang template). Bấm hàng mở
-  `/mail/campaigns/{campaignCode}`.
+  `CreateCampaignDialog` (nhận `initialTemplateCode` khi mở từ trang template, `initialWorkspaceIds`
+  khi mở từ các ô tích trên `/workspaces`). Bấm hàng mở `/mail/campaigns/{campaignCode}`.
 - **Tab Nhật ký gửi** → `MessageTable` (props `values`, `onClearFilters`, `campaignCode?`,
   `hideCampaignColumn?`); bảng chỉ giữ trang và cỡ trang. Lọc `email` là **khớp chính xác** cả địa
   chỉ, không phải tìm chuỗi con; `campaignCode` sai trả `404` nên hiện "Không có chiến dịch này"
@@ -152,17 +152,26 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
   backend **im lặng**: thấy `rawWorkspaceIds` khác rỗng là nó dùng danh sách đó và bỏ hẳn
   `workspaceIds`, nên nửa còn lại biến mất không dấu vết. Id số chỉ mở cho workspace, tài khoản
   không có đường này. Template khai `requiredContext` chứa
-  `WORKSPACE` thì khóa lựa chọn theo tài khoản trên UI. `variables` gửi đúng và đủ tập
-  `template.customVariables`, không thừa không thiếu (422 nếu sai). `dryRun: true` chỉ đếm, response
-  không có khóa `campaignCode`; `queued === 0` không phải lỗi, chiến dịch vẫn tạo DONE với
-  `total: 0`. Poll chi tiết mỗi 5 giây khi còn `pending + sending > 0`, dừng khi hết.
+  `WORKSPACE` thì khóa lựa chọn theo tài khoản trên UI. **Biến không còn chặn gửi** (backend đổi
+  2026-09-20): khóa version khai mà bỏ trống thì lưu rỗng, render ra chỗ trống và vẫn gửi, trả về
+  trong `blankVariables`; khóa version không khai thì backend bỏ hẳn, trả về trong `ignoredVariables`
+  và **không bao giờ** đè được biến server tự tính như `workspaceName`. UI vì thế chỉ cảnh báo chứ
+  không khóa nút, nhưng phải hiện rõ danh sách biến sắp trống trước khi bấm. Mỗi lần gọi tối đa
+  **5000 id** mỗi danh sách (400 nếu vượt); một dòng `null` trong danh sách cũng là 400, không bị bỏ
+  qua im lặng. `dryRun: true` chỉ đếm, response không có khóa `campaignCode`; `queued === 0` không
+  phải lỗi, chiến dịch vẫn tạo DONE với `total: 0`. Response luôn kèm `skipped`: từng id không nhận
+  mail kèm lý do (`WORKSPACE_NOT_FOUND`, `WORKSPACE_DELETED`, `NO_ACTIVE_OWNER`, `NO_EMAIL`,
+  `DUPLICATE_OWNER` kèm `mergedIntoWorkspaceId`, `ACCOUNT_NOT_FOUND`); `SkippedBreakdown` trong
+  dialog dựng khối này, vì bộ đếm chỉ nói "bao nhiêu" còn sau khi mail bay đi thì câu hỏi duy nhất
+  trả lời được là "id nào". Poll chi tiết mỗi 5 giây khi còn `pending + sending > 0`, dừng khi hết.
 
 ## Types
 
 `src/types/admin.ts`: `AdminMailTemplateRow`, `AdminMailTemplate`, `AdminMailTemplateVersion`,
 `MailTemplateInput`, `AdminMailVariable`, `AdminMailVariableGroup`, `MailContextInput`,
 `MailPreviewResult`, `MailTestSendInput`, `MailTestSendResult`, `AdminMailCampaignRow`,
-`AdminMailCampaignDetail`, `CreateCampaignInput`, `CreateCampaignResult`, `CampaignActionResult`,
+`AdminMailCampaignDetail`, `CreateCampaignInput`, `CreateCampaignResult`, `SkippedTarget`,
+`SkipReason`, `CampaignActionResult`,
 `AdminMailMessageRow`, `AdminMailTemplateListParams`, `AdminMailMessageListParams`, `MailCategory`,
 `MailContextGroup`, `MailCampaignStatus`, `MailMessageStatus`.
 
@@ -178,8 +187,11 @@ có header, `Badge mono="plain"` (bản `mono` sẵn có kèm `uppercase` nên s
 là chọn-một chứ không phải tab (tab thật đi bằng primitive `Tabs`).
 
 Luật dùng chung: `src/lib/admin/mail.ts` (regex mã/biến, `validationProblems` + `explainProblem` +
-`problemLine` cho 422, `concurrentVersion` cho 409, `insertVariable`, `declaredGroups`,
-`renderDraft` + `unsupportedPebble` cho xem trước bản nháp, `FOOTER_INCLUDE`, `isCampaignLive`). `isCampaignLive` là vị từ dùng chung cho nhịp polling của hook
+`problemLine`, `concurrentVersion` cho 409, `insertVariable`, `declaredGroups`,
+`renderDraft` + `unsupportedPebble` cho xem trước bản nháp, `FOOTER_INCLUDE`, `isCampaignLive`,
+`SKIP_REASON` + `groupSkipped` cho khối id bị bỏ). `validationProblems` nhận **cả 400 lẫn 422**:
+backend đã chuyển status của `UnprocessableEntityException` sang 400 từ 2026-09-13, giữ 422 để bản
+cũ còn chạy. `isCampaignLive` là vị từ dùng chung cho nhịp polling của hook
 và chỉ báo "đang theo dõi" trên màn chi tiết: hợp đồng đóng cửa sổ theo `status`, nhưng một chiến
 dịch vừa hủy vẫn còn dòng `SENDING` đang bay nên cộng thêm hai bộ đếm; hai nơi lệch vị từ là màn
 báo "số liệu đã chốt" trong lúc query vẫn tự đọc lại. `explainProblem(problem, context)` nhận `'template' | 'campaign'` vì

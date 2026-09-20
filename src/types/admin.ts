@@ -605,6 +605,27 @@ export interface CreateCampaignInput {
   dryRun: boolean;
 }
 
+/** Vì sao một id đã nhắm tới lại không nhận được mail. */
+export type SkipReason =
+  | 'WORKSPACE_NOT_FOUND'
+  | 'WORKSPACE_DELETED'
+  | 'NO_ACTIVE_OWNER'
+  | 'NO_EMAIL'
+  | 'DUPLICATE_OWNER'
+  | 'ACCOUNT_NOT_FOUND';
+
+/**
+ * Một id bị bỏ, kèm lý do. Khóa nào không áp dụng thì **vắng hẳn** khỏi JSON: một dòng nhắm theo
+ * workspace không có `accountId`, và chỉ `DUPLICATE_OWNER` mới có `mergedIntoWorkspaceId`.
+ */
+export interface SkippedTarget {
+  workspaceId?: string;
+  accountId?: string;
+  reason: SkipReason;
+  /** Id mà chủ sở hữu này thực sự nhận mail, khi lý do là `DUPLICATE_OWNER`. */
+  mergedIntoWorkspaceId?: string;
+}
+
 export interface CreateCampaignResult {
   /** Vắng hẳn khỏi JSON khi `dryRun` (không phải null). */
   campaignCode?: string;
@@ -614,6 +635,12 @@ export interface CreateCampaignResult {
   skippedDuplicate: number;
   skippedNoEmail: number;
   dryRun: boolean;
+  /** Từng id không nhận được mail, kèm lý do. Luôn có mặt, rỗng khi không có gì để báo. */
+  skipped: SkippedTarget[];
+  /** Biến version khai mà request không truyền: lưu rỗng, render ra chỗ trống, vẫn gửi. */
+  blankVariables: string[];
+  /** Biến request truyền mà version không khai: bị bỏ, không bao giờ lưu, không đè được biến server tự tính. */
+  ignoredVariables: string[];
 }
 
 export interface CampaignActionResult {

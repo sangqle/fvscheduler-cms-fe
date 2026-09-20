@@ -1,5 +1,11 @@
 import { ApiError } from '@/types/api';
-import type { AdminMailVariableGroup, MailCampaignStatus, MailContextGroup } from '@/types/admin';
+import type {
+  AdminMailVariableGroup,
+  MailCampaignStatus,
+  MailContextGroup,
+  SkipReason,
+  SkippedTarget,
+} from '@/types/admin';
 
 /** `^[a-z0-9][a-z0-9-]{2,63}$` — mã template, không đổi được sau khi tạo. */
 const TEMPLATE_CODE = /^[a-z0-9][a-z0-9-]{2,63}$/;
@@ -40,11 +46,13 @@ export function validateCustomVariable(
 }
 
 /**
- * Chi tiết của 422: `UnprocessableEntityException` trả `data` là **danh sách** mọi lỗi cùng lúc
- * (không dừng ở lỗi đầu). Mọi status khác trả mảng rỗng để nơi gọi rơi về `apiErrorMessage`.
+ * Chi tiết lỗi nghiệp vụ: `UnprocessableEntityException` trả `data` là **danh sách** mọi lỗi cùng
+ * lúc (không dừng ở lỗi đầu). Nhận cả 400 lẫn 422: backend đã đổi status của lớp ngoại lệ này từ
+ * 422 sang 400 (2026-09-13), giữ lại 422 để bản cũ còn chạy được. Status khác trả mảng rỗng để nơi
+ * gọi rơi về `apiErrorMessage`.
  */
 export function validationProblems(error: unknown): string[] {
-  if (!(error instanceof ApiError) || error.status !== 422) return [];
+  if (!(error instanceof ApiError) || (error.status !== 400 && error.status !== 422)) return [];
   const data = (error.payload as { data?: unknown } | null)?.data;
   if (!Array.isArray(data)) return [];
   return data.filter((d): d is string => typeof d === 'string');
@@ -73,7 +81,7 @@ export function explainProblem(problem: string, context: ProblemContext = 'templ
       /^unknown variable: (.+)$/,
       (m) =>
         context === 'campaign'
-          ? `Biến ${m[1]} không nằm trong danh sách biến tự do của version này: bỏ nó khỏi chiến dịch, hoặc tải lại danh sách biến của template.`
+          ? `Biến ${m[1]} không nằm trong danh sách biến tự do của version này nên đã bị bỏ qua.`
           : `Biến ${m[1]} chưa được khai: thêm nhóm ngữ cảnh chứa nó, hoặc khai nó thành biến tự do.`,
     ],
     [/^unknown attribute: (.+)$/, (m) => `${m[1]} là giá trị phẳng, không đọc thuộc tính con của nó được.`],
@@ -84,6 +92,7 @@ export function explainProblem(problem: string, context: ProblemContext = 'templ
     [/^custom variable shadows a catalog variable: (.+)$/, (m) => `${m[1]} trùng một biến catalog, đổi tên khác.`],
     [/^template requires WORKSPACE context.*$/, () => 'Template này khai ngữ cảnh WORKSPACE nên chỉ gửi theo workspace được.'],
     [/^missing variable: (.+)$/, (m) => `Thiếu giá trị cho biến ${m[1]}.`],
+    [/^(\w+) must not contain a null entry$/, (m) => `Danh sách ${m[1]} có một dòng rỗng, bỏ dòng đó đi.`],
   ];
   for (const [re, render] of rules) {
     const m = re.exec(problem);
@@ -210,4 +219,33 @@ export function offsetOfLine(text: string, line: number): number {
   let offset = 0;
   for (let i = 0; i < Math.min(line - 1, lines.length); i += 1) offset += lines[i].length + 1;
   return offset;
+}
+
+/** Nhãn tiếng Việt cho `SkipReason`; mã enum giữ nguyên chữ hoa ở chỗ nào cần đối chiếu backend. */
+export const SKIP_REASON: Record<SkipReason, string> = {
+  WORKSPACE_NOT_FOUND: 'Không có workspace nào mang id này',
+  WORKSPACE_DELETED: 'Workspace đã xóa',
+  NO_ACTIVE_OWNER: 'Không còn chủ sở hữu đang hoạt động',
+  NO_EMAIL: 'Chủ sở hữu chưa có email',
+  DUPLICATE_OWNER: 'Trùng chủ sở hữu với một id khác trong danh sách',
+  ACCOUNT_NOT_FOUND: 'Không có tài khoản này, hoặc tài khoản chưa có email',
+};
+
+/**
+ * Gom `skipped` theo lý do để hiển thị. `DUPLICATE_OWNER` tách riêng vì nó **không phải** một lần
+ * gửi hụt: chủ sở hữu đó vẫn nhận mail, chỉ là nhận đúng một lần, nên gộp nó vào cùng khối với
+ * "không có email" sẽ đọc ra thành mất người nhận.
+ */
+export function groupSkipped(skipped: SkippedTarget[]): { reason: SkipReason; targets: SkippedTarget[] }[] {
+  const order: SkipReason[] = [
+    'WORKSPACE_NOT_FOUND',
+    'WORKSPACE_DELETED',
+    'NO_ACTIVE_OWNER',
+    'NO_EMAIL',
+    'ACCOUNT_NOT_FOUND',
+    'DUPLICATE_OWNER',
+  ];
+  return order
+    .map((reason) => ({ reason, targets: skipped.filter((t) => t.reason === reason) }))
+    .filter((g) => g.targets.length > 0);
 }

@@ -98,7 +98,7 @@ export function WorkspaceFilters({
         </Button>
       )}
       <p className="w-full text-xs leading-snug text-muted-foreground sm:ml-auto sm:w-auto sm:max-w-64 sm:text-right">
-        Không có thao tác ghi ở màn này · grant / extend / cancel nằm trong chi tiết
+        Tích chọn để gửi mail hàng loạt · grant / extend / cancel nằm trong chi tiết
       </p>
     </div>
   );

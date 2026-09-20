@@ -46,9 +46,16 @@ import { ContextChips, CustomVariableChips, VersionChip } from '@/components/adm
 import { useCreateMailCampaign, useMailTemplate, useMailTemplates } from '@/hooks/useAdminMail';
 import { apiErrorMessage } from '@/lib/api/auth';
 import { isSendableTemplate } from '@/lib/admin/labels';
-import { CAMPAIGN_NAME_MAX, explainProblem, parseIdList, validationProblems } from '@/lib/admin/mail';
-import { cn } from '@/lib/utils';
-import type { CreateCampaignInput, CreateCampaignResult } from '@/types/admin';
+import {
+  CAMPAIGN_NAME_MAX,
+  SKIP_REASON,
+  explainProblem,
+  groupSkipped,
+  parseIdList,
+  validationProblems,
+} from '@/lib/admin/mail';
+import { cn, shortId } from '@/lib/utils';
+import type { CreateCampaignInput, CreateCampaignResult, SkippedTarget } from '@/types/admin';
 
 type Mode = 'workspace' | 'account';
 type Step = 1 | 2 | 3;
@@ -83,10 +90,17 @@ export function CreateCampaignDialog({
   open,
   onOpenChange,
   initialTemplateCode,
+  initialWorkspaceIds,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialTemplateCode?: string;
+  /**
+   * Id workspace mờ đã chọn sẵn ở nơi gọi (vd các ô tích trên danh sách workspace). Chúng được nạp
+   * vào ô dán của bước 2 thay vì đi thẳng xuống body, nên người vận hành vẫn đọc, sửa và đối chiếu
+   * được đúng danh sách sắp gửi trước khi chạy thử.
+   */
+  initialWorkspaceIds?: string[];
 }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -128,12 +142,12 @@ export function CreateCampaignDialog({
     setTemplateCode(initialTemplateCode ?? '');
     setName('');
     setModeChoice('workspace');
-    setRawIds({ workspace: '', account: '' });
+    setRawIds({ workspace: (initialWorkspaceIds ?? []).join('\n'), account: '' });
     setVariables({});
     setEstimate(null);
     setServerError(null);
     setProblems([]);
-  }, [open, initialTemplateCode]);
+  }, [open, initialTemplateCode, initialWorkspaceIds]);
 
   const options = React.useMemo(
     () =>
@@ -161,7 +175,9 @@ export function CreateCampaignDialog({
   // dùng đọc con số người nhận rồi tự đoán vì sao thiếu.
   const mixedIdForms = numericIds.length > 0 && opaqueIds.length > 0;
   const useRawIds = numericIds.length > 0 && !mixedIdForms;
-  const missing = missingVariables(custom, variables);
+  // Biến bỏ trống KHÔNG còn chặn gửi: backend lưu rỗng và render ra chỗ trống. Vẫn tính ra để cảnh
+  // báo, vì "gửi đi một mail thiếu chữ" là thứ người vận hành muốn thấy trước, không phải sau.
+  const blank = missingVariables(custom, variables);
 
   const variableProblems = problems.filter((p) => VARIABLE_PROBLEM.test(p));
   const otherProblems = problems.filter((p) => !VARIABLE_PROBLEM.test(p));
@@ -173,7 +189,7 @@ export function CreateCampaignDialog({
   const done: Record<Step, boolean> = {
     1: Boolean(templateCode && name.trim() && detail.data && !notSendable),
     2: ids.length > 0 && malformed.length === 0 && !mixedIdForms,
-    3: missing.length === 0,
+    3: true,
   };
 
   /**
@@ -518,11 +534,11 @@ export function CreateCampaignDialog({
                 <Field
                   label="Biến của template"
                   badge={
-                    <Badge variant="warning" size="sm">
-                      {custom.length} bắt buộc
+                    <Badge variant={blank.length > 0 ? 'warning' : 'info'} size="sm">
+                      {custom.length} biến
                     </Badge>
                   }
-                  hint="Giá trị dùng chung cho mọi người nhận. Thiếu một biến hoặc thừa một biến đều là 422."
+                  hint="Giá trị dùng chung cho mọi người nhận. Bỏ trống vẫn gửi được, chỗ đó trong mail sẽ trống."
                 >
                   <CustomVariableInputs
                     names={custom}
@@ -538,8 +554,20 @@ export function CreateCampaignDialog({
                 </Text>
               )}
 
+              {blank.length > 0 && (
+                <Alert variant="warning">
+                  <AlertDescription className="flex flex-col gap-1">
+                    <span>
+                      {blank.length} biến đang bỏ trống. Mail vẫn gửi, nhưng chỗ của chúng trong tiêu đề
+                      và nội dung sẽ trống trơn:
+                    </span>
+                    <span className="font-mono text-xs break-all">{blank.join(', ')}</span>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" onClick={runDryRun} disabled={busy || missing.length > 0}>
+                <Button variant="outline" onClick={runDryRun} disabled={busy}>
                   {dryRun.isPending ? <Spinner size="sm" /> : <FlaskConical className="size-4" />}
                   {ready ? 'Chạy thử lại' : 'Chạy thử (không ghi)'}
                 </Button>
@@ -584,6 +612,22 @@ export function CreateCampaignDialog({
                       <AlertDescription>
                         Không có người nhận hợp lệ. Chiến dịch vẫn tạo được, nó sẽ ở trạng thái DONE với 0
                         người nhận.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <SkippedBreakdown skipped={ready.skipped} />
+
+                  {ready.ignoredVariables.length > 0 && (
+                    <Alert variant="warning">
+                      <AlertDescription className="flex flex-col gap-1">
+                        <span>
+                          {ready.ignoredVariables.length} biến gửi lên không nằm trong danh sách biến của
+                          version này nên bị bỏ qua. Kiểm tra lại xem có gõ sai tên không:
+                        </span>
+                        <span className="font-mono text-xs break-all">
+                          {ready.ignoredVariables.join(', ')}
+                        </span>
                       </AlertDescription>
                     </Alert>
                   )}
@@ -650,6 +694,53 @@ export function CreateCampaignDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Từng id sẽ không nhận mail, gom theo lý do. Bộ đếm ở trên trả lời "bao nhiêu", khối này trả lời
+ * "id nào", vốn là câu hỏi duy nhất trả lời được sau khi mail đã bay: một id gộp vì trùng chủ và
+ * một id mất vì không còn email đều biến mất khỏi danh sách message y hệt nhau.
+ */
+function SkippedBreakdown({ skipped }: { skipped: SkippedTarget[] }) {
+  const groups = groupSkipped(skipped);
+  if (groups.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+      <Text variant="caption" className="font-semibold">
+        {skipped.length} id không nhận mail
+      </Text>
+      {groups.map((group) => (
+        <div key={group.reason} className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">
+            {SKIP_REASON[group.reason]} · {group.targets.length}
+          </span>
+          <ul className="flex flex-wrap gap-1.5">
+            {group.targets.slice(0, 12).map((t) => {
+              const id = t.workspaceId ?? t.accountId ?? '';
+              return (
+                <li key={id} className="font-mono text-[11px] text-foreground">
+                  <Tooltip
+                    content={
+                      t.mergedIntoWorkspaceId
+                        ? `Chủ sở hữu này nhận mail theo id ${t.mergedIntoWorkspaceId}`
+                        : id
+                    }
+                  >
+                    <span className="rounded bg-card px-1.5 py-0.5 ring-1 ring-border">{shortId(id)}</span>
+                  </Tooltip>
+                </li>
+              );
+            })}
+            {group.targets.length > 12 && (
+              <li className="text-[11px] text-muted-foreground">
+                và {group.targets.length - 12} id khác
+              </li>
+            )}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
