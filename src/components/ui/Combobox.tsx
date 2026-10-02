@@ -150,7 +150,9 @@ export function Combobox({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // `modal`: content được portal ra `body`, nằm ngoài Dialog; scroll-lock của Dialog chặn wheel/touch
+    // ở đó nên list không cuộn được. Popover modal tự đặt một lớp lock mới cho riêng content (giống Select).
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           id={id}
