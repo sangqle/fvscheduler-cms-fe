@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Text } from '@/components/ui/Text';
 import { ChoiceSelect, FilterSelect } from '@/components/admin/shared/FilterSelect';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { MAIL_CAMPAIGN_STATUS, MAIL_MESSAGE_STATUS } from '@/lib/admin/labels';
 import type { MailCampaignStatus, MailCategory, MailMessageStatus } from '@/types/admin';
 
@@ -125,18 +126,6 @@ export function hasActiveMessageFilters(v: MessageFilterValues): boolean {
   return !!(v.campaignCode || v.status || v.email);
 }
 
-/** Ô nhập giữ giá trị gõ dở tại chỗ, chỉ đẩy lên state cha sau 300ms ngừng gõ. */
-function useDebouncedText(committed: string | undefined, commit: (value: string | undefined) => void) {
-  const [text, setText] = React.useState(committed ?? '');
-  React.useEffect(() => setText(committed ?? ''), [committed]);
-  React.useEffect(() => {
-    if (text === (committed ?? '')) return;
-    const t = setTimeout(() => commit(text.trim() || undefined), 300);
-    return () => clearTimeout(t);
-  }, [text, committed, commit]);
-  return [text, setText] as const;
-}
-
 const NOTE_CLASS = 'w-full sm:ml-auto sm:w-auto sm:max-w-72 sm:text-right';
 
 // ─── Template ────────────────────────────────────────────────────────────────
@@ -173,7 +162,7 @@ export function TemplateFilters({
   counts?: { active: number; partial: number; off: number };
 }) {
   const commitQ = React.useCallback((q: string | undefined) => onChange({ q }), [onChange]);
-  const [q, setQ] = useDebouncedText(values.q, commitQ);
+  const [q, setQ] = useDebouncedSearch(values.q, commitQ);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -269,12 +258,12 @@ export function MessageFilters({
   scoped?: boolean;
 }) {
   const commitEmail = React.useCallback((email: string | undefined) => onChange({ email }), [onChange]);
-  const [email, setEmail] = useDebouncedText(values.email, commitEmail);
+  const [email, setEmail] = useDebouncedSearch(values.email, commitEmail);
   const commitCode = React.useCallback(
     (campaignCode: string | undefined) => onChange({ campaignCode }),
     [onChange],
   );
-  const [code, setCode] = useDebouncedText(values.campaignCode, commitCode);
+  const [code, setCode] = useDebouncedSearch(values.campaignCode, commitCode);
 
   return (
     <div className="flex flex-wrap items-center gap-2">

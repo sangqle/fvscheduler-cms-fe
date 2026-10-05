@@ -10,6 +10,7 @@ import { FilterSelect } from '@/components/admin/shared/FilterSelect';
 import { isDraft } from '@/components/admin/plans/planDisplay';
 import { useCatalogGroups, useCatalogItems } from '@/hooks/useAdminCatalog';
 import { useAdminPlans } from '@/hooks/useAdminPlans';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 
 /**
  * Hàng lọc của hai tab catalog, cùng khuôn với `WorkspaceFilters`: ô tìm co giãn, dropdown rộng
@@ -66,18 +67,6 @@ export function hasActivePlanFilters(v: PlanFilterValues): boolean {
 
 export function hasActiveItemFilters(v: ItemFilterValues): boolean {
   return !!(v.q || v.group || v.status);
-}
-
-/** Ô tìm giữ giá trị gõ dở tại chỗ, chỉ đẩy lên URL sau 300ms ngừng gõ. */
-function useDebouncedSearch(committed: string | undefined, commit: (q: string | undefined) => void) {
-  const [q, setQ] = React.useState(committed ?? '');
-  React.useEffect(() => setQ(committed ?? ''), [committed]);
-  React.useEffect(() => {
-    if (q === (committed ?? '')) return;
-    const t = setTimeout(() => commit(q || undefined), 300);
-    return () => clearTimeout(t);
-  }, [q, committed, commit]);
-  return [q, setQ] as const;
 }
 
 const NOTE_CLASS = 'w-full sm:ml-auto sm:w-auto sm:max-w-72 sm:text-right';

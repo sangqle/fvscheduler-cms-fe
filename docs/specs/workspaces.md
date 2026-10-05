@@ -15,7 +15,7 @@ chỉ đọc.
 - Hàng lọc một dòng (`flex-wrap`): ô tìm co giãn · `FilterSelect` Loại / Trạng thái gói / Gói (rộng
   theo nội dung, dấu check bên phải theo convention `Select`) · nút Xóa bộ lọc khi đang lọc. Sắp xếp là `WorkspaceSortControl` trong `PageHeader actions`.
 - URL: `?q=&type=&subscriptionStatus=&planCode=&sort=createdAt,desc|name,asc&page=&size=15`
-  (`useUrlState`; đổi filter reset `page`). Ô tìm debounce 300ms.
+  (`useUrlState`; đổi filter reset `page`). Ô tìm debounce 500ms qua `useDebouncedSearch` (dùng chung mọi ô tìm; bỏ qua lần URL dội về từ chính lần commit nên không nuốt ký tự đang gõ).
 - Cột: ô tích chọn · `rawId` (khóa số của `workspace.id`, `RawId`) · Workspace (tên, loại, id
   ngắn) · Chủ sở hữu (tên, email hoặc "Chưa có tài khoản đăng
   nhập") · TV · CN · Gói hiện tại (tên + badge nguồn + mã, hoặc "Chưa từng có gói") · Trạng thái ·
@@ -47,7 +47,7 @@ chỉ đọc.
     "ngoài N" vì nó không cộng vào `total`), cột `byRevenueMonth` kèm cảnh báo khi tổng các tháng
     thiếu so với `total`, rồi dải chip `byStatus` chỉ liệt kê trạng thái thật sự có booking.
     Bấm total = xóa bộ lọc, deleted = bật `includeDeleted`, unstaffed = lọc client.
-  - Hàng lọc: ô tìm (`search`, debounce 300ms, khớp tên khách / số điện thoại / mã booking) ·
+  - Hàng lọc: ô tìm (`search`, debounce 500ms, khớp tên khách / số điện thoại / mã booking) ·
     `FilterSelect` trạng thái kèm số đếm từ `byStatus` · `DateRangePicker` ngày chụp ·
     `ChoiceSelect` sắp theo · `Switch` "Hiện cả đã xóa" · nút Xóa bộ lọc · `ReadOnlyHint` đẩy phải.
   - URL (tiền tố `bk` vì dùng chung query với màn chi tiết, `tab` và `from` đã có chủ):

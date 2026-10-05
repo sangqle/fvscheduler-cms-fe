@@ -13,6 +13,7 @@ import { OrderDrawer } from '@/components/admin/orders/OrderDrawer';
 import { OrderTable } from '@/components/admin/orders/OrderTable';
 import { useAdminOrders } from '@/hooks/useAdminOrders';
 import { useAdminWorkspace } from '@/hooks/useAdminWorkspaces';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { toInt, useUrlState } from '@/hooks/useUrlState';
 import { shortId } from '@/lib/utils';
 import type { OrderStatus } from '@/types/admin';
@@ -36,13 +37,8 @@ export function OrderListScreen() {
   const page = toInt(get('page'), 0);
   const size = toInt(get('size'), DEFAULT_SIZE);
 
-  const [q, setQ] = React.useState(qParam ?? '');
-  React.useEffect(() => setQ(qParam ?? ''), [qParam]);
-  React.useEffect(() => {
-    if (q === (qParam ?? '')) return;
-    const t = setTimeout(() => set({ q: q || undefined }), 300);
-    return () => clearTimeout(t);
-  }, [q, qParam, set]);
+  const commitQ = React.useCallback((value: string | undefined) => set({ q: value }), [set]);
+  const [q, setQ] = useDebouncedSearch(qParam, commitQ);
 
   const query = useAdminOrders({ status: status || undefined, q: qParam, workspaceId, page, size });
   const wsScope = useAdminWorkspace(workspaceId ?? '');

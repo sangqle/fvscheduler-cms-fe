@@ -1,15 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 /**
  * Bộ lọc/phân trang sống trên URL (`?q=&status=&page=`) để reload/back giữ nguyên và link chia sẻ
  * được. `set` gộp nhiều key, giá trị rỗng/undefined thì xoá key; đổi filter luôn về trang 0
  * trừ khi chính `page` được set.
+ *
+ * Ghi URL bằng `window.history.replaceState`, không qua `router.replace`: Next vẫn đồng bộ vào
+ * `useSearchParams`, nhưng không gọi lại server (request `_rsc`) mỗi lần đổi filter. Mọi trang admin
+ * đọc query ở client nên không cần server render lại.
  */
 export function useUrlState() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -17,19 +20,20 @@ export function useUrlState() {
 
   const set = React.useCallback(
     (patch: Record<string, string | number | undefined | null>) => {
-      const next = new URLSearchParams(searchParams.toString());
+      // Đọc URL lúc gọi chứ không lấy `searchParams` của lần render: hai lần `set` liền nhau không đè nhau.
+      const next = new URLSearchParams(window.location.search);
       for (const [k, v] of Object.entries(patch)) {
         if (v === undefined || v === null || v === '') next.delete(k);
         else next.set(k, String(v));
       }
       if (!('page' in patch)) next.delete('page');
       const qs = next.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
     },
-    [router, pathname, searchParams],
+    [pathname],
   );
 
-  const clear = React.useCallback(() => router.replace(pathname, { scroll: false }), [router, pathname]);
+  const clear = React.useCallback(() => window.history.replaceState(null, '', pathname), [pathname]);
 
   return { get, set, clear, searchParams };
 }

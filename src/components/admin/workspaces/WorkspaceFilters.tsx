@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { FilterSelect } from '@/components/admin/shared/FilterSelect';
 import { useAdminPlans } from '@/hooks/useAdminPlans';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { SUBSCRIPTION_STATUS, WORKSPACE_TYPE } from '@/lib/admin/labels';
 import type { SubscriptionStatus, WorkspaceType } from '@/types/admin';
 
@@ -57,15 +58,8 @@ export function WorkspaceFilters({
   onClear: () => void;
 }) {
   const { data: plans } = useAdminPlans();
-  const [q, setQ] = React.useState(values.q ?? '');
-  React.useEffect(() => setQ(values.q ?? ''), [values.q]);
-
-  // Debounce ô tìm kiếm 300ms để không bắn request mỗi phím.
-  React.useEffect(() => {
-    if (q === (values.q ?? '')) return;
-    const t = setTimeout(() => onChange({ q: q || undefined }), 300);
-    return () => clearTimeout(t);
-  }, [q, values.q, onChange]);
+  const commitQ = React.useCallback((q: string | undefined) => onChange({ q }), [onChange]);
+  const [q, setQ] = useDebouncedSearch(values.q, commitQ);
 
   const planOptions = React.useMemo(
     () => (plans ?? []).map((p) => ({ value: p.code, label: `${p.name}${p.isActive ? '' : ' · ngừng bán'}` })),

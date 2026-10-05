@@ -9,7 +9,7 @@ Updated: 2026-09-05 · Thiết kế: CMS-05, 06, 08 · Backend: `ADM-FLOW-07-rec
 ## Màn hình
 
 ### `/orders` (CMS-05)
-- `OrderListScreen` → hàng lọc một dòng (`flex-wrap`): ô tìm co giãn (debounce 300ms) +
+- `OrderListScreen` → hàng lọc một dòng (`flex-wrap`): ô tìm co giãn (debounce 500ms) +
   `SegmentedControl` status (Tất cả/PENDING/PAID/EXPIRED/CANCELED); dưới đó `OrderTable`
   (phân trang server, size 12).
 - URL: `?status=&q=&workspaceId=&page=&size=&code=`. `workspaceId` chỉ là query filter; khi có,

@@ -19,6 +19,7 @@ import { BookingSummaryStrip } from '@/components/admin/workspaces/BookingSummar
 import { BookingTable } from '@/components/admin/workspaces/BookingTable';
 import { BookingTabSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { useAdminBookings, useAdminBookingSummary } from '@/hooks/useAdminBookings';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { toInt, useUrlState } from '@/hooks/useUrlState';
 import { BOOKING_SORT_OPTIONS, BOOKING_STATUS_LABEL } from '@/lib/admin/labels';
 import { bookingStaffing } from '@/lib/admin/booking';
@@ -75,13 +76,8 @@ export function BookingTab({ workspaceId }: { workspaceId: string }) {
   const page = toInt(get('bkPage'), 0);
   const size = toInt(get('bkSize'), DEFAULT_SIZE);
 
-  const [search, setSearch] = React.useState(searchParam ?? '');
-  React.useEffect(() => setSearch(searchParam ?? ''), [searchParam]);
-  React.useEffect(() => {
-    if (search === (searchParam ?? '')) return;
-    const t = setTimeout(() => set({ bkQ: search || undefined, bkPage: undefined }), 300);
-    return () => clearTimeout(t);
-  }, [search, searchParam, set]);
+  const commitSearch = React.useCallback((value: string | undefined) => set({ bkQ: value, bkPage: undefined }), [set]);
+  const [search, setSearch] = useDebouncedSearch(searchParam, commitSearch);
 
   const range: DateRange | undefined = React.useMemo(() => {
     const from = parseDay(fromDay);
@@ -126,7 +122,7 @@ export function BookingTab({ workspaceId }: { workspaceId: string }) {
       bkOnly: undefined,
       bkPage: undefined,
     });
-  }, [set]);
+  }, [set, setSearch]);
 
   const filtered = !!(status || searchParam || fromDay || toDay || includeDeleted || onlyUnstaffed);
   const rows = React.useMemo(() => list.data?.content ?? [], [list.data]);
