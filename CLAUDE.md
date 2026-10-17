@@ -11,7 +11,7 @@ context; không có changelog, feature-docs hay plan-doc.
 - Next.js 16 App Router, `--webpack` (không Turbopack), React 19, TypeScript strict
 - Tailwind v4 + tokens ở `src/styles/tokens/` (copy 1:1 từ ERP), primitives shadcn-style ở `src/components/ui/`
 - TanStack Query v5, React Hook Form + Zod, NextAuth v5 (JWT, Credentials + google-backend)
-- Node 20, port **3002**
+- Node 22 (wrangler cần >=22), port **3002**
 
 ```bash
 npm install
