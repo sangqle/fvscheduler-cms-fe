@@ -6,6 +6,9 @@
     "dev": "next dev --webpack -p 3002",
     "build": "next build --webpack",
     "start": "next start -p 3002",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "lint": "eslint src",
     "lint:css": "stylelint \"src/**/*.css\"",
     "lint:ds": "eslint src && stylelint \"src/**/*.css\"",
@@ -42,6 +45,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.12",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
@@ -51,6 +55,7 @@
     "postcss": "^8.5.1",
     "stylelint": "^17.14.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "wrangler": "^4.151.1"
   }
 }

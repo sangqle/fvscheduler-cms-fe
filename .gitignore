@@ -44,3 +44,8 @@ Thumbs.db
 
 # TypeScript build cache
 tsconfig.tsbuildinfo
+
+# Cloudflare (OpenNext + wrangler)
+.open-next/
+.wrangler/
+.dev.vars*
