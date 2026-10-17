@@ -8,7 +8,6 @@
     "start": "next start -p 3002",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "lint": "eslint src",
     "lint:css": "stylelint \"src/**/*.css\"",
     "lint:ds": "eslint src && stylelint \"src/**/*.css\"",

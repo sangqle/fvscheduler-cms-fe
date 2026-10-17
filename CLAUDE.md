@@ -105,3 +105,11 @@ Cùng pattern ERP: `POST /auth/login` (hoặc Google code → `POST /auth/google
 token backend nằm trong NextAuth JWT, tự refresh qua `POST /auth/refresh`. Token trơn (không
 claim workspace) là đủ cho `/api/admin/**`. `(admin)/layout.tsx` probe `GET /api/admin/plans`
 server-side: 403 → `/forbidden`, 401 → `/login?reason=session-expired`.
+
+## Deploy (Cloudflare Workers)
+
+Worker `fvscheduler-cms-fe`, OpenNext (`open-next.config.ts`, `wrangler.jsonc`), deploy qua Git build
+của Cloudflare: build `npm run cf:build`, deploy `npx opennextjs-cloudflare deploy`. `NEXTAUTH_SECRET`
+là Secret trên dashboard; biến thường để ở `vars` trong `wrangler.jsonc` (deploy xóa biến Text đặt trên
+dashboard). **Không deploy từ máy local**: OpenNext nhúng `.env.local` vào bundle. `npm run cf:preview`
+chạy thử local được. Next phải nằm trong dải `peerDependencies.next` của `@opennextjs/cloudflare`.

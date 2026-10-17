@@ -11,6 +11,13 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	// Biến thường (không bí mật) để ở đây: `wrangler deploy` xóa biến Text đặt trên dashboard.
+	// NEXTAUTH_SECRET là Secret, đặt trên dashboard (Secret không bị xóa khi deploy).
+	"vars": {
+		// NextAuth v5 chỉ tự tin host trên Vercel / CF Pages; trên Workers thiếu biến này là
+		// UntrustedHost → trang "Server error". An toàn vì NEXTAUTH_URL (.env.production) ghim origin.
+		"AUTH_TRUST_HOST": "true"
 	}
 	// Không có R2 incremental cache, WORKER_SELF_REFERENCE hay IMAGES: app toàn route động,
 	// không ISR/revalidate, không dùng next/image. Thêm lại theo https://opennext.js.org/cloudflare/caching
