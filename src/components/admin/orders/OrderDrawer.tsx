@@ -12,6 +12,7 @@ import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { KeyValue, KeyValueList } from '@/components/admin/shared/KeyValue';
 import { ErrorState, NotFoundState, isNotFound } from '@/components/admin/shared/QueryState';
 import { MarkPaidDialog } from '@/components/admin/orders/MarkPaidDialog';
+import { OrderCodeChip } from '@/components/admin/orders/orderDisplay';
 import { useAdminOrder } from '@/hooks/useAdminOrders';
 import { useAdminPlans } from '@/hooks/useAdminPlans';
 import { useAdminWorkspace } from '@/hooks/useAdminWorkspaces';
@@ -82,6 +83,28 @@ export function OrderDrawer({ orderCode, onClose }: { orderCode: string | null; 
               <KeyValue label="Chu kỳ · số tiền">
                 {BILLING_PERIOD[order.billingPeriod]} · <span className="font-mono">{formatCurrency(order.amount)}</span>
               </KeyValue>
+              {(order.couponCode || order.affiliateCode) && (
+                <KeyValue label="Mã áp dụng">
+                  <span className="inline-flex flex-wrap items-center gap-1.5">
+                    <OrderCodeChip order={order} />
+                    <span className="text-xs text-muted-foreground">
+                      {order.couponCode ? 'mã giảm giá' : 'mã giới thiệu'}
+                      {order.discountAmount > 0 && (
+                        <>
+                          {' · giảm '}
+                          <span className="font-mono">−{formatCurrency(order.discountAmount)}</span>
+                        </>
+                      )}
+                    </span>
+                  </span>
+                </KeyValue>
+              )}
+              {order.discountAmount > 0 && (
+                <KeyValue label="Giá niêm yết">
+                  <span className="font-mono">{formatCurrency(order.amount + order.discountAmount)}</span>{' '}
+                  <span className="text-xs text-muted-foreground">= số tiền + giảm</span>
+                </KeyValue>
+              )}
               <KeyValue label="Tạo lúc"><span className="font-mono text-xs">{formatDateTime(order.createdAt)}</span></KeyValue>
               <KeyValue label="Thanh toán lúc"><span className="font-mono text-xs">{order.paidAt ? formatDateTime(order.paidAt) : '—'}</span></KeyValue>
               <KeyValue label="sepayTxId">

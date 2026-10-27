@@ -6,8 +6,9 @@ import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { RawId } from '@/components/admin/shared/RawId';
+import { OrderAmountCell } from '@/components/admin/orders/orderDisplay';
 import { BILLING_PERIOD, ORDER_STATUS, isOrderPayable } from '@/lib/admin/labels';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 import type { PageResponse } from '@/types/api';
 import type { AdminOrderRow } from '@/types/admin';
 
@@ -27,7 +28,7 @@ const columns: ColumnDef<AdminOrderRow>[] = [
       </span>
     ),
   },
-  { id: 'amount', header: 'Số tiền', className: 'font-mono text-xs', cell: (o) => formatCurrency(o.amount) },
+  { id: 'amount', header: 'Số tiền', className: 'font-mono text-xs', cell: (o) => <OrderAmountCell order={o} /> },
   { id: 'status', header: 'Trạng thái', cell: (o) => <EnumBadge meta={ORDER_STATUS[o.status]} /> },
   { id: 'created', header: 'Tạo lúc', className: 'font-mono text-xs', cell: (o) => formatDateTime(o.createdAt) },
   { id: 'paid', header: 'Thanh toán lúc', className: 'font-mono text-xs', cell: (o) => (o.paidAt ? formatDateTime(o.paidAt) : '—') },

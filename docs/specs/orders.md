@@ -1,6 +1,6 @@
 # Đơn hàng
 
-Updated: 2026-09-05 · Thiết kế: CMS-05, 06, 08 · Backend: `ADM-FLOW-07-reconcile-orders`
+Updated: 2026-10-27 · Thiết kế: CMS-05, 06, 08 · Backend: `ADM-FLOW-07-reconcile-orders`
 
 ## Mục đích
 
@@ -17,11 +17,14 @@ Updated: 2026-09-05 · Thiết kế: CMS-05, 06, 08 · Backend: `ADM-FLOW-07-rec
 - Cột đầu tiên là `rawId`, khóa số **của workspace**: đơn hàng khóa theo `orderCode` nên tự nó
   không có id số nào.
 - Hàng PAID/CANCELED mờ đi; cột "Khớp SePay": `tx <id>` · "Xác nhận tay" (PAID không có tx) · "—".
+- Cột "Số tiền" là số khách trả (`amount`); đơn có mã thì dòng dưới là chip mã (`OrderCodeChip` ở
+  `orderDisplay.tsx`: mã giảm giá bấm sang `/coupons/{code}`, mã giới thiệu chỉ hiện) + `−discountAmount`.
 - Click hàng → `?code=<orderCode>` mở drawer.
 
 ### Drawer chi tiết (CMS-06) `OrderDrawer` (`SlideOver`)
 - Header: mã đơn + badge; workspace (link) · tạo bởi · id ngắn.
-- Thông tin: gói (+ đang bán/ngừng bán từ catalog), chu kỳ · số tiền, tạo lúc, thanh toán lúc,
+- Thông tin: gói (+ đang bán/ngừng bán từ catalog), chu kỳ · số tiền, mã áp dụng (chip + loại + số
+  đã giảm, khi có), giá niêm yết = `amount + discountAmount` (khi có giảm), tạo lúc, thanh toán lúc,
   sepayTxId, gói hiện tại của workspace (badge + còn/quá N ngày), ghi chú EXPIRED, `rawPayload` (pre).
 - Footer: Đóng + "Xác nhận đã thanh toán" (`variant="success"`), chỉ bật với PENDING/EXPIRED và
   gói còn đang bán; tooltip giải thích khi disabled.
@@ -44,14 +47,17 @@ dùng chung component ở `OrderSkeletons.tsx`, xem [README](./README.md)) · em
 |---|---|---|---|
 | `useAdminOrders(params)` | `GET /api/admin/orders` | `['admin','orders','list',params]` | |
 | `useAdminOrder(code)` | `GET /api/admin/orders/{orderCode}` | `['admin','orders','detail',code]` | |
-| `useMarkPaid(code)` | `POST /api/admin/orders/{orderCode}/mark-paid` | | setQueryData detail; orders list; `['admin','workspaces']` |
+| `useMarkPaid(code)` | `POST /api/admin/orders/{orderCode}/mark-paid` | | setQueryData detail; orders list; `['admin','workspaces']`; `['admin','coupons']` khi đơn có `couponCode` |
 
 ## Rule FE phải giữ
 
 - Mark-paid nhận cả PENDING lẫn EXPIRED; PAID/CANCELED disabled, không gửi.
 - Không tự submit lại thao tác ghi khi mất mạng (chỉ read được retry).
 - Sort chỉ `createdAt`/`paidAt`/`status`.
+- Một đơn mang tối đa một mã: `couponCode` (mã giảm giá) hoặc `affiliateCode` (mã giới thiệu), không bao
+  giờ cả hai; `discountAmount` là 0 khi không có mã. Giá niêm yết luôn là `amount + discountAmount`.
 
 ## Types
 
-`src/types/admin.ts`: `AdminOrderRow`, `AdminOrderDetail`, `MarkPaidInput`, `MarkPaidResult`.
+`src/types/admin.ts`: `AdminOrderRow` (có `affiliateCode`, `couponCode`, `discountAmount`), `AdminOrderDetail`,
+`MarkPaidInput`, `MarkPaidResult`.

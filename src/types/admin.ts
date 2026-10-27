@@ -442,7 +442,14 @@ export interface AdminOrderRow {
   planCode: string;
   planName: string;
   billingPeriod: BillingPeriod;
+  /** Số khách phải chuyển, đã trừ giảm giá. Giá niêm yết = `amount + discountAmount`. */
   amount: number;
+  /** Mã giới thiệu của đơn. Một đơn mang tối đa một mã: không bao giờ cùng có với `couponCode`. */
+  affiliateCode: string | null;
+  /** Mã giảm giá của đơn; null khi đơn không dùng mã hoặc dùng mã giới thiệu. */
+  couponCode: string | null;
+  /** Số đã giảm nhờ mã, 0 khi đơn không dùng mã nào. */
+  discountAmount: number;
   status: OrderStatus;
   createdAt: string;
   paidAt: string | null;
@@ -839,4 +846,121 @@ export interface UpdateAffiliateRateInput {
   commissionRateBp: number;
   discountRateBp: number;
   active: boolean;
+}
+
+// ─── Mã giảm giá (coupons) ────────────────────────────────────────────────────
+
+/**
+ * Trạng thái suy theo đồng hồ lúc đọc, ưu tiên INACTIVE → EXPIRED → SCHEDULED → ACTIVE. Không lưu
+ * DB, và FE không tự tính lại: luôn đọc từ response.
+ */
+export type CouponState = 'ACTIVE' | 'SCHEDULED' | 'EXPIRED' | 'INACTIVE';
+/** Giá trị `?status=` của `GET /api/admin/coupons`; không gửi là `all`. */
+export type CouponStatusFilter = 'active' | 'scheduled' | 'expired' | 'inactive';
+/**
+ * Trạng thái một dòng sổ lượt dùng. `LAPSED` không lưu DB: đó là dòng `HELD` mà hạn giữ chỗ đã qua,
+ * tức một checkout bỏ dở, không còn chiếm chỗ nhưng vẫn ở lại làm lịch sử.
+ */
+export type CouponRedemptionStatus = 'HELD' | 'LAPSED' | 'REDEEMED';
+
+/** Một dòng `GET /api/admin/coupons`, cũng là thân của GET một mã, POST và PUT. */
+export interface AdminCoupon {
+  /** Khóa nghiệp vụ, 3..20 ký tự A-Z 0-9, lưu viết hoa, không đổi được sau khi tạo. Coupon không có id mờ. */
+  code: string;
+  /** 1..99. */
+  percentOff: number;
+  /**
+   * Mã gói, đã sắp xếp; `[]` là mọi gói đang bán (không bao giờ gồm gói Free). Có thể còn mã của gói
+   * đã bị xóa khỏi catalog: backend trả nguyên văn, không có cờ nào, FE tự đối chiếu catalog.
+   */
+  planCodes: string[];
+  /** null là cả hai kỳ. */
+  billingPeriod: BillingPeriod | null;
+  /** Tổng số workspace được dùng; null là không giới hạn. */
+  maxRedemptions: number | null;
+  firstPurchaseOnly: boolean;
+  /** ISO UTC, tính từ đúng mốc này; null là hiệu lực ngay khi tạo. */
+  startsAt: string | null;
+  /** ISO UTC, KHÔNG tính mốc này (đúng mốc là đã hết hạn); null là không có ngày kết thúc. */
+  endsAt: string | null;
+  active: boolean;
+  /** Ghi chú nội bộ, khách không bao giờ thấy. */
+  note: string | null;
+  state: CouponState;
+  /** Số dòng REDEEMED. Có thể vượt `maxRedemptions` khi admin xác nhận tay một đơn trả muộn. */
+  redeemedCount: number;
+  /** Chỉ các lượt giữ chỗ còn hạn; lượt đã hết hạn giữ chỗ không tính vào đâu cả. */
+  heldCount: number;
+  /** `max(0, maxRedemptions - redeemedCount - heldCount)`, không bao giờ âm; null khi không giới hạn. */
+  remaining: number | null;
+  /** Tổng đã giảm, cộng trên các dòng REDEEMED. */
+  totalDiscount: number;
+  /** Tổng khách đã trả, cộng trên các dòng REDEEMED. */
+  totalPaid: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Một dòng `GET /api/admin/coupons/{code}/redemptions`: mỗi workspace đúng một dòng, mãi mãi, ở mọi
+ * trạng thái. Các trường của đơn là ảnh chụp của sổ cái, ghi lại từ đơn đã trả lúc chốt lượt dùng.
+ */
+export interface AdminCouponRedemptionRow {
+  /** `rawId`: khóa số của workspace, xem `RawId`. */
+  workspace: { id: string; rawId: number; name: string | null };
+  /** Đơn đang giữ chỗ, hoặc đơn đã thanh toán. */
+  orderCode: string;
+  planCode: string;
+  billingPeriod: BillingPeriod;
+  /** Lúc chốt lượt dùng được ghi lại thành `paidAmount + discountAmount`. */
+  listAmount: number;
+  discountAmount: number;
+  /** null tới khi thanh toán. */
+  paidAmount: number | null;
+  status: CouponRedemptionStatus;
+  /** null sau khi đã thanh toán. */
+  heldUntil: string | null;
+  /** `paid_at` của đơn; null tới khi thanh toán. */
+  redeemedAt: string | null;
+  createdAt: string;
+}
+
+/** Sort chỉ `createdAt` / `code` / `endsAt`, mặc định `createdAt,desc`. */
+export interface AdminCouponListParams {
+  status?: CouponStatusFilter;
+  /** Tiền tố của mã (không phải chuỗi con), hoa thường đều được. */
+  q?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+/** Sort chỉ `createdAt` / `redeemedAt`, mặc định `createdAt,desc`. Không lọc theo trạng thái. */
+export interface CouponRedemptionListParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+/**
+ * PUT /api/admin/coupons/{code}: thay MỌI trường sửa được, nên form luôn gửi đủ; trường tùy chọn để
+ * null nghĩa là xóa nó đi. Bật / tắt mã cũng là một PUT như vậy với `active` đảo lại.
+ */
+export interface UpdateCouponInput {
+  percentOff: number;
+  /** Bắt buộc kể cả khi rỗng (`[]` là mọi gói đang bán), tối đa 50. */
+  planCodes: string[];
+  billingPeriod: BillingPeriod | null;
+  maxRedemptions: number | null;
+  firstPurchaseOnly: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  /** Tối đa 500 ký tự. */
+  note: string | null;
+}
+
+/** POST /api/admin/coupons: như PUT, thêm `code`. */
+export interface CreateCouponInput extends UpdateCouponInput {
+  code: string;
 }

@@ -4,6 +4,9 @@ import type {
   AffiliateCommissionStatus,
   AffiliatePayoutStatus,
   BillingPeriod,
+  CouponRedemptionStatus,
+  CouponState,
+  CouponStatusFilter,
   GrantSource,
   MailCampaignStatus,
   MailCategory,
@@ -334,3 +337,39 @@ export const AFFILIATE_COMMISSION_SORT_OPTIONS = [
   { value: 'commissionAmount,desc', label: 'Hoa hồng, cao nhất' },
   { value: 'availableAt,asc', label: 'Khả dụng, sớm nhất' },
 ];
+
+// ─── Mã giảm giá (coupons) ────────────────────────────────────────────────────
+
+/** Nhãn enum giữ nguyên chữ hoa; `hint` là câu tiếng Việt đi kèm ở tooltip và dòng phụ. */
+export interface EnumMetaWithHint extends EnumMeta {
+  hint: string;
+}
+
+/** EXPIRED đỏ và INACTIVE xám, cùng cặp màu với `ORDER_STATUS` (EXPIRED / CANCELED). */
+export const COUPON_STATE: Record<CouponState, EnumMetaWithHint> = {
+  ACTIVE: { label: 'ACTIVE', variant: 'success', hint: 'Đang dùng được' },
+  SCHEDULED: { label: 'SCHEDULED', variant: 'info', hint: 'Chưa tới ngày bắt đầu' },
+  EXPIRED: { label: 'EXPIRED', variant: 'destructive', hint: 'Đã qua ngày kết thúc' },
+  INACTIVE: { label: 'INACTIVE', variant: 'muted', hint: 'Đã tắt' },
+};
+
+/** `HELD` vàng như đơn `PENDING`: tiền chưa về, chỗ đang bị giữ. */
+export const COUPON_REDEMPTION_STATUS: Record<CouponRedemptionStatus, EnumMetaWithHint> = {
+  REDEEMED: { label: 'REDEEMED', variant: 'success', hint: 'Đã thanh toán, đã tính một lượt' },
+  HELD: { label: 'HELD', variant: 'warning', hint: 'Đang giữ chỗ, chờ chuyển khoản' },
+  LAPSED: { label: 'LAPSED', variant: 'muted', hint: 'Checkout bỏ dở, hết hạn giữ chỗ' },
+};
+
+/** Giá trị là chữ thường vì đó là đúng giá trị `?status=` mà API nhận. */
+export const COUPON_STATUS_OPTIONS: { value: CouponStatusFilter | ''; label: string }[] = [
+  { value: '', label: 'Tất cả' },
+  { value: 'active', label: 'ACTIVE' },
+  { value: 'scheduled', label: 'SCHEDULED' },
+  { value: 'expired', label: 'EXPIRED' },
+  { value: 'inactive', label: 'INACTIVE' },
+];
+
+/** Kỳ thanh toán của một mã giảm giá: null là cả hai kỳ. */
+export function couponPeriodLabel(period: BillingPeriod | null): string {
+  return period ? BILLING_PERIOD[period] : 'Cả hai';
+}

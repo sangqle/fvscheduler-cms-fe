@@ -51,9 +51,12 @@ export function PageHeaderSkeleton({
 export function DetailHeaderSkeleton({
   badges = 2,
   actions = 1,
+  actionClassName = 'w-40',
 }: {
   badges?: number;
   actions?: number;
+  /** Bề ngang mỗi nút giả: mặc định khớp nút có chữ dài; màn có nhiều nút ngắn thì thu lại để không xuống dòng. */
+  actionClassName?: string;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -74,7 +77,7 @@ export function DetailHeaderSkeleton({
         {actions > 0 && (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {Array.from({ length: actions }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-40" />
+              <Skeleton key={i} className={cn('h-8', actionClassName)} />
             ))}
           </div>
         )}

@@ -8,6 +8,7 @@ Một file cho mỗi module CMS. Đọc trước khi sửa, cập nhật sau khi
 | Workspace: list, detail, grant/extend/cancel | [workspaces.md](./workspaces.md) | CMS-01..04, CMS-08 |
 | Đơn hàng: list, drawer, mark-paid | [orders.md](./orders.md) | CMS-05, 06, 08 |
 | Catalog gói | [plans.md](./plans.md) | CMS-07 |
+| Mã giảm giá: list, chi tiết + sổ lượt dùng, tạo/sửa/bật tắt/xóa | [coupons.md](./coupons.md) | chưa có mockup |
 | Tiếp thị liên kết: yêu cầu rút, hoa hồng, tỷ lệ | [affiliate.md](./affiliate.md) | chưa có mockup |
 | Email hệ thống | [mail.md](./mail.md) | CMS-10..14 |
 | Tiện ích (giải mã id mờ) | [utils.md](./utils.md) | chưa có mockup |
@@ -38,11 +39,11 @@ DB nền tảng mà `wk…` thì không join được với kết quả SQL. Hi�
 | Response | Trường |
 |---|---|
 | `AdminWorkspaceRowResponse` · `AdminWorkspaceDetailResponse` | `rawId`, `owner.rawMembershipId`, `owner.rawAccountId` |
-| `AdminOrderRowResponse.WorkspaceRef` (dùng lại ở `AdminOrderDetailResponse`) | `workspace.rawId` |
+| `AdminOrderRowResponse.WorkspaceRef` (dùng lại ở `AdminOrderDetailResponse`, `AdminCouponRedemptionRowResponse`) | `workspace.rawId` |
 | `AdminOrderDetailResponse.CreatedBy` | `rawAccountId` |
 
-Gói, item catalog, template, chiến dịch và message **không** có: chúng khóa theo `code` chứ không
-theo id mờ. Membership dùng chung DTO với tenant nên backend cố tình không mang shape này sang.
+Gói, item catalog, mã giảm giá, template, chiến dịch và message **không** có: chúng khóa theo `code`
+chứ không theo id mờ. Membership dùng chung DTO với tenant nên backend cố tình không mang shape này sang.
 Hiển thị bằng `RawId` (`components/admin/shared/RawId.tsx`), không tự vẽ lại.
 
 Id mờ nào **không** có khóa số đi kèm sẵn thì tra ở `/utils` (`POST /api/admin/ids/decode`, xem

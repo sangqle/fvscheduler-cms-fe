@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/http';
 import { useAuthHeaders } from '@/hooks/useAuthHeaders';
+import { couponKeys } from '@/hooks/useAdminCoupons';
 import type { PageResponse } from '@/types/api';
 import type { AdminOrderDetail, AdminOrderListParams, AdminOrderRow, MarkPaidInput, MarkPaidResult } from '@/types/admin';
 
@@ -34,7 +35,10 @@ export function useAdminOrder(orderCode: string | null) {
   });
 }
 
-/** POST /api/admin/orders/{orderCode}/mark-paid: 409 khi đơn không payable / gói ngừng bán. */
+/**
+ * POST /api/admin/orders/{orderCode}/mark-paid: 409 khi đơn không payable / gói ngừng bán. Đơn kèm mã
+ * giảm giá thì thanh toán là chốt lượt dùng, kể cả khi hạn giữ chỗ đã qua, nên bộ đếm của mã đổi theo.
+ */
 export function useMarkPaid(orderCode: string) {
   const { headers } = useAuthHeaders();
   const qc = useQueryClient();
@@ -46,6 +50,7 @@ export function useMarkPaid(orderCode: string) {
       qc.setQueryData(orderKeys.detail(orderCode), result.order);
       void qc.invalidateQueries({ queryKey: ['admin', 'orders', 'list'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] });
+      if (result.order.couponCode) void qc.invalidateQueries({ queryKey: couponKeys.all });
     },
   });
 }
