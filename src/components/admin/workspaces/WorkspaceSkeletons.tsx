@@ -9,6 +9,8 @@ import {
   TableSkeleton,
   TabsListSkeleton,
 } from '@/components/admin/shared/PageSkeleton';
+import { ALBUM_TOTALS_LABELS, ALBUM_TOTALS_TITLE } from '@/components/admin/workspaces/AlbumTotalsStrip';
+import { STORAGE_CAPTION } from '@/lib/admin/clientAlbums';
 
 /** Cột và bề rộng lấy đúng từ `WorkspaceTable`. */
 const COLUMNS = [
@@ -42,7 +44,7 @@ export function WorkspaceDetailSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       <DetailHeaderSkeleton badges={2} actions={1} />
-      <TabsListSkeleton labels={['Tổng quan', 'Booking', 'Thành viên', 'Lịch sử gói']} />
+      <TabsListSkeleton labels={['Tổng quan', 'Booking', 'Album khách', 'Thành viên', 'Lịch sử gói']} />
       {/* Cùng lưới với `OverviewTab`: thẻ gói chiếm hai cột, thẻ hạn mức đứng bên phải */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <CardSkeleton lines={6} className="lg:col-span-2" />
@@ -55,7 +57,7 @@ export function WorkspaceDetailSkeleton() {
 /**
  * Khung xương lúc **chuyển tab**, không phải lúc mở màn.
  *
- * Ba tab dưới đây mỗi tab tự gọi API của mình và chỉ mount khi được chọn, nên mỗi lần bấm sang là
+ * Bốn tab dưới đây mỗi tab tự gọi API của mình và chỉ mount khi được chọn, nên mỗi lần bấm sang là
  * một lượt tải mới. Không có khung xương thì nội dung nhỏ giọt từng mảnh (dải tóm tắt trước, hàng
  * lọc sau, bảng cuối) và bố cục nhảy hai ba nhịp; có rồi thì khung đứng yên đúng chỗ, dữ liệu về là
  * điền vào. Header và dải tab nằm ngoài, chúng đã tải xong từ trước và không được nháy lại.
@@ -160,6 +162,85 @@ export function BookingTabSkeleton() {
       <BookingSummarySkeleton />
       <FilterBarSkeleton fields={3} />
       <TableSkeleton columns={BOOKING_COLUMNS} rows={6} mobileCards />
+    </div>
+  );
+}
+
+/** Cột lấy đúng từ `AlbumsTab`, kể cả bề rộng ràng buộc. */
+const ALBUM_COLUMNS = [
+  { header: 'Tên album', className: 'min-w-[12vw]' },
+  { header: 'Khách', className: 'min-w-[9vw]' },
+  { header: 'Trạng thái' },
+  { header: 'Drive / NAS' },
+  { header: 'Tạo lúc', className: 'w-36' },
+  { header: 'Ảnh', className: 'w-20 text-right' },
+  { header: 'Dung lượng', className: 'text-right' },
+  { header: 'Cho tải về', className: 'w-24' },
+];
+
+/**
+ * Dải `AlbumTotalsStrip` lúc tải. Tiêu đề, nhãn từng ô và dòng chú thích dung lượng là chữ biết trước
+ * lúc build nên hiện chữ thật, chỉ con số và dòng phụ là vệt xám.
+ */
+export function AlbumTotalsSkeleton() {
+  return (
+    <Card>
+      <div className="flex flex-wrap items-baseline gap-x-2 px-4 pt-4 sm:px-5 sm:pt-5">
+        <span className="text-xs font-semibold text-foreground">{ALBUM_TOTALS_TITLE}</span>
+        <Skeleton className="h-3 w-56 max-w-full" />
+      </div>
+      <div className="grid grid-cols-2 items-start gap-5 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-5">
+        {ALBUM_TOTALS_LABELS.map((label) => (
+          <div key={label} className="flex min-w-0 flex-col items-start gap-px">
+            <span className="flex h-8 items-center">
+              <Skeleton className="h-6 w-14" />
+            </span>
+            <span className="text-xs text-muted-foreground">{label}</span>
+            <Skeleton className="mt-0.5 h-2.5 w-20" />
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-border px-4 py-3 sm:px-5">
+        <Text variant="caption" muted>
+          {STORAGE_CAPTION}
+        </Text>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * Riêng bảng album. Tab dùng nó thay cho khung lỗi trong lúc bấm "Thử lại": route có thể chờ tới 35 giây
+ * mới báo 503, và một nút thử lại đứng yên suốt chừng đó thời gian trông như không làm gì cả.
+ */
+export function AlbumTableSkeleton() {
+  return <TableSkeleton columns={ALBUM_COLUMNS} rows={6} mobileCards />;
+}
+
+/** Tab Album khách lúc tải: dải tổng, hàng lọc ngày, rồi bảng với tên cột thật. */
+export function AlbumsTabSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <AlbumTotalsSkeleton />
+      <FilterBarSkeleton fields={1} search={false} />
+      <AlbumTableSkeleton />
+    </div>
+  );
+}
+
+/**
+ * Hàng "Album khách" của thẻ Thống kê nhanh lúc tải. Nằm trong lưới 2 cột của thẻ nên chiếm cả hàng;
+ * ba nhãn là chữ thật, con số là vệt xám cao đúng một dòng số (28px) để lúc dữ liệu về hàng không nhảy.
+ */
+export function AlbumQuickStatSkeleton() {
+  return (
+    <div className="col-span-2 grid grid-cols-[repeat(auto-fit,minmax(6.5rem,1fr))] gap-3 border-t border-border pt-3">
+      {['Album khách', 'Tạo tháng này', 'Gần nhất'].map((label) => (
+        <div key={label} className="flex min-w-0 flex-col">
+          <Skeleton className="my-1 h-5 w-10" />
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </div>
+      ))}
     </div>
   );
 }

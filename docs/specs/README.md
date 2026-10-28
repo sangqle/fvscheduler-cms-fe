@@ -11,6 +11,7 @@ Một file cho mỗi module CMS. Đọc trước khi sửa, cập nhật sau khi
 | Mã giảm giá: list, chi tiết + sổ lượt dùng, tạo/sửa/bật tắt/xóa | [coupons.md](./coupons.md) | chưa có mockup |
 | Tiếp thị liên kết: yêu cầu rút, hoa hồng, tỷ lệ | [affiliate.md](./affiliate.md) | chưa có mockup |
 | Email hệ thống | [mail.md](./mail.md) | CMS-10..14 |
+| Album khách: thống kê theo tháng, dung lượng (chỉ đọc), cùng ô và tab trong workspace | [client-albums.md](./client-albums.md) | chưa có mockup |
 | Tiện ích (giải mã id mờ) | [utils.md](./utils.md) | chưa có mockup |
 
 ## Khung xương lúc tải (dùng chung)
@@ -41,9 +42,12 @@ DB nền tảng mà `wk…` thì không join được với kết quả SQL. Hi�
 | `AdminWorkspaceRowResponse` · `AdminWorkspaceDetailResponse` | `rawId`, `owner.rawMembershipId`, `owner.rawAccountId` |
 | `AdminOrderRowResponse.WorkspaceRef` (dùng lại ở `AdminOrderDetailResponse`, `AdminCouponRedemptionRowResponse`) | `workspace.rawId` |
 | `AdminOrderDetailResponse.CreatedBy` | `rawAccountId` |
+| `AdminAlbumWorkspaceRef` (là `workspace` của `AdminAlbumWorkspaceCountRow` và `AdminAlbumStorageRow` ở màn [Album khách](./client-albums.md); null ở dòng "Không thuộc workspace") | `workspace.rawId` |
 
 Gói, item catalog, mã giảm giá, template, chiến dịch và message **không** có: chúng khóa theo `code`
 chứ không theo id mờ. Membership dùng chung DTO với tenant nên backend cố tình không mang shape này sang.
+Id của một album trong tab Album khách của workspace cũng không có: đó là id của framevis-drive, chỉ dùng làm
+React key.
 Hiển thị bằng `RawId` (`components/admin/shared/RawId.tsx`), không tự vẽ lại.
 
 Id mờ nào **không** có khóa số đi kèm sẵn thì tra ở `/utils` (`POST /api/admin/ids/decode`, xem

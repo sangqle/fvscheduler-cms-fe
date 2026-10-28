@@ -116,3 +116,102 @@ export function calendarDayOfPicker(date: Date): CalendarDay {
 export function pickerDateOf({ year, month, day }: CalendarDay): Date {
   return new Date(year, month - 1, day);
 }
+
+// ─── Mốc naive giờ Việt Nam ───────────────────────────────────────────────────
+// framevis-drive trả `createdAt` là GIỜ TƯỜNG Việt Nam dạng `yyyy-MM-ddTHH:mm:ss` (giây có thể vắng,
+// có thể kèm giây lẻ), KHÔNG offset: đó không phải một mốc tuyệt đối. Đưa vào `new Date`, `formatDate`,
+// `formatDateTime` hay `formatVn*` là bị đọc như giờ máy hoặc UTC rồi dịch theo múi giờ người xem, lệch
+// tới nửa ngày. Nên chỉ tách chuỗi, không bao giờ qua `Date`.
+
+const NAIVE_VN_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
+
+/** `dd/MM/yyyy HH:mm` của một mốc naive giờ Việt Nam. Chuỗi sai dạng (kể cả có offset hay `Z`) in nguyên văn, không đoán. */
+export function formatNaiveVnDateTime(value: string): string {
+  const m = NAIVE_VN_TIMESTAMP.exec(value);
+  return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : value;
+}
+
+/** `dd/MM/yyyy` của một mốc naive giờ Việt Nam. Chuỗi sai dạng in nguyên văn. */
+export function formatNaiveVnDate(value: string): string {
+  const m = NAIVE_VN_TIMESTAMP.exec(value);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : value;
+}
+
+// ─── Khóa ngày và tháng lịch ──────────────────────────────────────────────────
+// API album nhận `yyyy-MM-dd` (ngày lịch Việt Nam, cả hai đầu bao gồm) và `yyyy-MM`. Mọi phép tính ở
+// đây là số học trên năm, tháng, ngày chứ không qua `Date` theo giờ máy, nên múi giờ của người xem
+// không làm lệch một ngày. Tuyệt đối không dựng khóa bằng `new Date(...).toISOString()`.
+
+const DAY_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MONTH_KEY = /^(\d{4})-(\d{2})$/;
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function monthKeyOf(year: number, month: number): string {
+  return `${String(year).padStart(4, '0')}-${pad2(month)}`;
+}
+
+/** `yyyy-MM-dd` của một ngày lịch: khóa trên URL và tham số `from`/`to` của API album. */
+export function calendarDayKey({ year, month, day }: CalendarDay): string {
+  return `${monthKeyOf(year, month)}-${pad2(day)}`;
+}
+
+/** Ngược lại với `calendarDayKey`. null khi sai dạng hoặc ngày không có thật (`2026-02-30`). */
+export function parseCalendarDayKey(key: string | null | undefined): CalendarDay | null {
+  const m = key ? DAY_KEY.exec(key) : null;
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  const real = probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+  return real ? { year, month, day } : null;
+}
+
+/** `yyyy-MM` thành năm và tháng (1 tới 12). null khi sai dạng; dùng để kiểm một giá trị đọc từ URL. */
+export function parseMonthKey(key: string | null | undefined): { year: number; month: number } | null {
+  const m = key ? MONTH_KEY.exec(key) : null;
+  if (!m) return null;
+  const month = Number(m[2]);
+  return month >= 1 && month <= 12 ? { year: Number(m[1]), month } : null;
+}
+
+/** Tháng lịch Việt Nam đang diễn ra, `yyyy-MM`. */
+export function vnMonthKey(now: number = Date.now()): string {
+  const { year, month } = vnToday(now);
+  return monthKeyOf(year, month);
+}
+
+/** Lùi (âm) hoặc tiến (dương) `delta` tháng, tự qua năm: (`2026-01`, -1) cho `2025-12`. Key sai dạng trả nguyên văn. */
+export function shiftMonthKey(key: string, delta: number): string {
+  const parsed = parseMonthKey(key);
+  if (!parsed) return key;
+  const index = parsed.year * 12 + (parsed.month - 1) + delta;
+  return monthKeyOf(Math.floor(index / 12), (((index % 12) + 12) % 12) + 1);
+}
+
+/** `count` tháng gần nhất kết thúc ở tháng Việt Nam hiện tại, tháng hiện tại đứng đầu (mới tới cũ). */
+export function recentMonthKeys(count: number, now: number = Date.now()): string[] {
+  const current = vnMonthKey(now);
+  return Array.from({ length: Math.max(0, count) }, (_, i) => shiftMonthKey(current, -i));
+}
+
+/** "Tháng 10/2026" cho `2026-10`. Key sai dạng trả nguyên văn. */
+export function formatMonthKey(key: string): string {
+  const parsed = parseMonthKey(key);
+  return parsed ? `Tháng ${pad2(parsed.month)}/${parsed.year}` : key;
+}
+
+/**
+ * Ngày đầu và ngày cuối của một tháng `yyyy-MM`, dạng `yyyy-MM-dd`: dùng thẳng làm `from` và `to` của
+ * API album, vốn bao gồm cả hai đầu (`2026-02` cho `2026-02-01` tới `2026-02-28`). null khi sai dạng.
+ */
+export function monthDayKeys(key: string): { from: string; to: string } | null {
+  const parsed = parseMonthKey(key);
+  if (!parsed) return null;
+  const { year, month } = parsed;
+  const nextFirst: CalendarDay = month === 12 ? { year: year + 1, month: 1, day: 1 } : { year, month: month + 1, day: 1 };
+  return { from: calendarDayKey({ year, month, day: 1 }), to: calendarDayKey(addCalendarDays(nextFirst, -1)) };
+}

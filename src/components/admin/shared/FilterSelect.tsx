@@ -1,5 +1,6 @@
 'use client';
 
+import type * as React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/Select';
 import { cn } from '@/lib/utils';
 
@@ -79,17 +80,20 @@ export function ChoiceSelect({
   onChange,
   options,
   className,
+  size,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: FilterOption[];
   className?: string;
+  /** Cỡ ô chọn; bỏ trống là cỡ mặc định của `SelectTrigger`. */
+  size?: React.ComponentProps<typeof SelectTrigger>['size'];
 }) {
   const selected = options.find((o) => o.value === value);
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className={cn('min-w-0', className)}>
+      <SelectTrigger aria-label={label} size={size} className={cn('min-w-0', className)}>
         <span className="flex min-w-0 items-baseline gap-1">
           <span className="shrink-0 text-muted-foreground">{label}:</span>
           <span className="truncate font-medium">{selected?.label ?? ''}</span>

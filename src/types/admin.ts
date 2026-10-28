@@ -4,6 +4,7 @@
  * Spec: docs/specs/*.md.
  */
 
+import type { PageResponse } from '@/types/api';
 import type { BookingPaymentStatus, BookingResponse, BookingStatus } from '@/types/booking';
 
 export type WorkspaceType = 'freelancer' | 'studio';
@@ -87,7 +88,8 @@ export interface AdminItemOverride {
 /** GET /api/admin/workspaces/{workspaceId} */
 export interface AdminWorkspaceDetail extends AdminWorkspaceRow {
   entitlement: AdminEntitlement;
-  usage: Record<string, number>;
+  /** `ALBUMS_PER_MONTH` luôn là `null` ở đây (backend không gọi framevis-drive); số thật lấy từ tóm tắt album. */
+  usage: Record<string, number | null>;
   limitOverrides: AdminLimitOverride[];
   itemOverrides: AdminItemOverride[];
   stats: { bookings: number; clients: number };
@@ -965,4 +967,222 @@ export interface UpdateCouponInput {
 /** POST /api/admin/coupons: như PUT, thêm `code`. */
 export interface CreateCouponInput extends UpdateCouponInput {
   code: string;
+}
+
+// ─── Client albums (album khách) ──────────────────────────────────────────────
+// Năm route chỉ đọc: ba route toàn nền tảng ở `/api/admin/client-albums/{monthly,workspaces,storage}`
+// và hai route con của một workspace. Album sống ở framevis-drive (spring-a7c), ERP chỉ chuyển tiếp,
+// nên mọi con số do framevis-drive tính ngay lúc gọi, không có bộ đếm lưu sẵn. Số đếm và byte là số
+// JSON thường (byte còn chính xác tới 2^53, xa hơn tổng của mọi album).
+//
+// Hai cách đếm không bao giờ trộn. `monthly` và `workspaces` đếm SỰ KIỆN TẠO: album tạo hồi tháng
+// 10 rồi xóa vẫn tính vào tháng 10. `storage` và danh sách album của workspace chỉ đếm album và ảnh
+// CÒN SỐNG.
+
+/** Nhà lưu ảnh gốc của album. Chuỗi do spring-a7c giữ; hôm nay chỉ có hai giá trị này. */
+export type ClientAlbumProvider = 'GOOGLE_DRIVE' | 'SYNOLOGY_NAS';
+
+/**
+ * Một tháng của `GET /api/admin/client-albums/monthly`. Luôn đúng `inWorkspace + personal = created`
+ * và `drive + nas = created`.
+ */
+export interface AdminAlbumMonth {
+  /** `yyyy-MM`; null chỉ ở dòng `totals`. */
+  month: string | null;
+  /** Album tạo trong tháng, kể cả album đã xóa về sau: đếm sự kiện tạo, không phải album còn sống. */
+  created: number;
+  /** Trong số `created`, bao nhiêu album đã bị xóa kể từ đó. */
+  deleted: number;
+  /** `created - personal`. */
+  inWorkspace: number;
+  /** Album không thuộc workspace nào của ERP (dòng `workspace: null` ở hai route kia). */
+  personal: number;
+  /** `created - nas`. */
+  drive: number;
+  /** Album Synology NAS. */
+  nas: number;
+}
+
+/**
+ * GET /api/admin/client-albums/monthly. Mọi tháng của khoảng đều có mặt, tháng không có album là các
+ * số 0, cũ nhất trước. Không gửi tham số thì backend lấy 12 tháng gần nhất kể cả tháng hiện tại, tính
+ * theo giờ Việt Nam.
+ */
+export interface AdminAlbumMonthly {
+  months: AdminAlbumMonth[];
+  /** Cùng dạng một tháng, với `month === null`. */
+  totals: AdminAlbumMonth;
+}
+
+/**
+ * Workspace đứng sau một dòng thống kê (framevis-drive gom theo `workspace.id` số mà nó lưu).
+ * `exists === false`: không có workspace sống nào mang id đó, đã xóa hay chưa từng có đều đọc giống
+ * nhau; khi đó chỉ `id` và `rawId` có nghĩa, `name` và `subscription` là null.
+ */
+export interface AdminAlbumWorkspaceRef {
+  /** Id mờ `wk…`. */
+  id: string;
+  /** Khóa số của `workspace.id`, chỉ có trên `/api/admin/**`; xem `RawId`. */
+  rawId: number;
+  name: string | null;
+  exists: boolean;
+  /**
+   * Cùng shape cột Gói của danh sách workspace (`status` là `NONE` khi workspace chưa từng có gói).
+   * null đúng lúc `exists` là false.
+   */
+  subscription: AdminSubscriptionSummary | null;
+}
+
+/** Một dòng của `GET /api/admin/client-albums/workspaces`: album một workspace đã tạo trong khoảng. */
+export interface AdminAlbumWorkspaceCountRow {
+  /** null là dòng "không thuộc workspace nào". */
+  workspace: AdminAlbumWorkspaceRef | null;
+  /** Album tạo trong khoảng, kể cả album đã xóa về sau. */
+  albums: number;
+  /** Trong số `albums`, bao nhiêu đã bị xóa kể từ đó. */
+  deleted: number;
+}
+
+/**
+ * Dung lượng của một tập album CÒN SỐNG, tính bằng byte chứ không phải GB (đổi đơn vị là việc của CMS,
+ * xem `formatGb`). `bytes` chỉ cộng những ảnh có dung lượng nên là mức sàn, không bao giờ chính xác:
+ * luôn hiện kèm độ phủ `sizedPhotos / photos`.
+ */
+export interface AdminAlbumStorageFigures {
+  albums: number;
+  /** Ảnh còn sống. */
+  photos: number;
+  /** Trong số `photos`, ảnh có dung lượng (Google Drive báo; ảnh NAS không bao giờ có). */
+  sizedPhotos: number;
+  bytes: number;
+  /** Phần của `bytes` nằm trong các album đang bật cho khách tải về. */
+  downloadableBytes: number;
+  /** Trong số `albums`, album NAS (ảnh của chúng không có dung lượng). */
+  nasAlbums: number;
+}
+
+/** Một dòng của `GET /api/admin/client-albums/storage`. */
+export interface AdminAlbumStorageRow {
+  /** null là dòng "không thuộc workspace nào". */
+  workspace: AdminAlbumWorkspaceRef | null;
+  figures: AdminAlbumStorageFigures;
+}
+
+/**
+ * GET /api/admin/client-albums/storage. Hàng nặng nhất trước. `totals` phủ MỌI hàng của khoảng, không
+ * chỉ trang này. Route đắt (backend quét mọi ảnh còn sống của album trong khoảng), giới hạn 10 lượt
+ * mỗi phút: chỉ gọi khi admin bấm.
+ */
+export interface AdminAlbumStorage {
+  totals: AdminAlbumStorageFigures;
+  rows: PageResponse<AdminAlbumStorageRow>;
+}
+
+/**
+ * GET /api/admin/workspaces/{workspaceId}/client-albums/summary. Workspace chưa từng tạo album trả các
+ * số 0 và ngày null, không phải 404.
+ */
+export interface AdminWorkspaceAlbumSummary {
+  /** Album còn sống. */
+  albums: number;
+  /** Album đã xóa, tính mọi thời gian. */
+  deleted: number;
+  /**
+   * Album còn sống tạo trong tháng Việt Nam hiện tại: đúng con số ERP web dùng để khóa "Tạo album
+   * mới", nên xóa một album là trả lại một chỗ. Đây là mức dùng của quota `ALBUMS_PER_MONTH`
+   * (`usage.ALBUMS_PER_MONTH` của chi tiết workspace luôn null, cố ý).
+   */
+  createdThisMonth: number;
+  /** Album tạo trong tháng này rồi đã bị xóa. */
+  deletedThisMonth: number;
+  /**
+   * Giờ tường Việt Nam KHÔNG kèm offset (`yyyy-MM-ddTHH:mm:ss`): không phải một mốc tuyệt đối, đừng đưa
+   * vào `new Date` hay `formatDateTime`; dùng `formatNaiveVnDateTime`. Chỉ tính album còn sống, null
+   * khi không còn album nào.
+   */
+  firstCreatedAt: string | null;
+  /** Như `firstCreatedAt`. */
+  lastCreatedAt: string | null;
+  /** Album Google Drive còn sống. */
+  driveAlbums: number;
+  /** Album NAS còn sống. */
+  nasAlbums: number;
+}
+
+/**
+ * Một album còn sống ở `GET /api/admin/workspaces/{workspaceId}/client-albums`. Không bao giờ kèm mật
+ * khẩu, token chia sẻ hay branding.
+ */
+export interface AdminWorkspaceAlbumRow {
+  /** Id album của framevis-drive, KHÔNG phải id mờ của API này và không có khóa số: chỉ dùng làm React key. */
+  id: string;
+  title: string | null;
+  /** Có thể null hoặc rỗng. */
+  clientName: string | null;
+  /**
+   * Trạng thái album do spring-a7c giữ (ví dụ `DRAFT`, `CLIENT_SELECTING`, `SELECTION_COMPLETED`);
+   * không dịch, in chữ hoa mono. Là string vì tập giá trị không thuộc về ERP; null thì hiện ô trống
+   * nhạt màu như mọi ô thiếu dữ liệu.
+   */
+  status: string | null;
+  provider: ClientAlbumProvider;
+  /** Giờ tường Việt Nam KHÔNG kèm offset, như `firstCreatedAt`; dùng `formatNaiveVnDateTime`. */
+  createdAt: string;
+  allowDownload: boolean;
+  /** Ảnh còn sống. */
+  photos: number;
+  /** Trong số `photos`, ảnh có dung lượng. */
+  sizedPhotos: number;
+  bytes: number;
+}
+
+/**
+ * GET /api/admin/workspaces/{workspaceId}/client-albums. Mới nhất trước, thứ tự cố định (không có tham
+ * số sắp xếp). `totals` phủ MỌI album còn sống của khoảng, không chỉ trang này.
+ */
+export interface AdminWorkspaceAlbums {
+  totals: AdminAlbumStorageFigures;
+  albums: PageResponse<AdminWorkspaceAlbumRow>;
+}
+
+/**
+ * Tham số của `GET /api/admin/client-albums/monthly`, đều tùy chọn. `yyyy-MM`, cả hai đầu bao gồm.
+ * Không gửi gì là 12 tháng gần nhất do backend định nghĩa theo giờ Việt Nam: chỉ gửi sau khi admin
+ * đổi khoảng, để định nghĩa đó không phụ thuộc múi giờ của người xem.
+ */
+export interface AdminAlbumMonthlyParams {
+  fromMonth?: string;
+  toMonth?: string;
+}
+
+/**
+ * Tham số của `GET /api/admin/client-albums/workspaces`. `from`/`to` là ngày lịch Việt Nam
+ * `yyyy-MM-dd` trên ngày TẠO album, cả hai đầu bao gồm (một ngày thì `from = to`), thiếu là mở. `page`
+ * tính từ 0; `size` mặc định 20 và backend kẹp trong 1..100.
+ */
+export interface AdminAlbumWorkspaceListParams {
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * Tham số của `GET /api/admin/client-albums/storage`: như danh sách workspace, thêm `workspaceId` để
+ * thu về một workspace. Là id MỜ (`wk…`), không phải `rawId`; backend không kiểm tra nó với CSDL này.
+ */
+export interface AdminAlbumStorageParams {
+  from?: string;
+  to?: string;
+  workspaceId?: string;
+  page?: number;
+  size?: number;
+}
+
+/** Tham số của `GET /api/admin/workspaces/{workspaceId}/client-albums`, cùng nghĩa với danh sách workspace. */
+export interface AdminWorkspaceAlbumListParams {
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
 }

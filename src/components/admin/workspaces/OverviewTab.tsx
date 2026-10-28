@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Ban, CalendarPlus, Info, Sparkles } from 'lucide-react';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -12,14 +13,33 @@ import { Text } from '@/components/ui/Text';
 import { EnumBadge } from '@/components/admin/shared/EnumBadge';
 import { KeyValue, KeyValueList } from '@/components/admin/shared/KeyValue';
 import { ReadOnlyHint } from '@/components/admin/shared/ReadOnlyHint';
+import { AlbumQuickStat } from '@/components/admin/workspaces/AlbumQuickStat';
 import { GrantDialog } from '@/components/admin/workspaces/GrantDialog';
 import { ExtendDialog } from '@/components/admin/workspaces/ExtendDialog';
 import { CancelDialog } from '@/components/admin/workspaces/CancelDialog';
 import { useAdminPlans } from '@/hooks/useAdminPlans';
+import { useAdminWorkspaceAlbumSummary } from '@/hooks/useAdminClientAlbums';
 import { LIMIT_LABEL, SUBSCRIPTION_SOURCE, SUBSCRIPTION_STATUS } from '@/lib/admin/labels';
 import { relativeDays } from '@/lib/admin/time';
+import { apiErrorMessage } from '@/lib/api/auth';
 import { formatCurrency, formatDateTime, shortId } from '@/lib/utils';
-import type { AdminPlan, AdminWorkspaceDetail } from '@/types/admin';
+import type { AdminPlan, AdminWorkspaceAlbumSummary, AdminWorkspaceDetail } from '@/types/admin';
+
+/**
+ * Quota đo ở framevis-drive chứ không ở ERP: chi tiết workspace gửi `usage.ALBUMS_PER_MONTH = null` có
+ * chủ đích và không bao giờ được đọc. Mức dùng lấy từ `createdThisMonth` của route tóm tắt album.
+ */
+const ALBUM_QUOTA_KEY = 'ALBUMS_PER_MONTH';
+
+const UNMEASURED_HINT = 'Chưa đo tại đây: số liệu này đếm ở dịch vụ khác.';
+
+/** Vì sao dòng quota album chưa có số: đang hỏi framevis-drive, hoặc nó trả lỗi (nguyên văn của backend). */
+function albumQuotaHint(albums: UseQueryResult<AdminWorkspaceAlbumSummary, Error>): string {
+  if (albums.isError) {
+    return `Chưa lấy được số album đã tạo trong tháng. ${apiErrorMessage(albums.error, 'Dịch vụ album không trả lời.')}`;
+  }
+  return 'Đang lấy số album đã tạo trong tháng từ dịch vụ album.';
+}
 
 function planPriceLine(plan: AdminPlan | undefined): string {
   if (!plan) return '';
@@ -42,6 +62,13 @@ function SectionTitle({ children, hint }: { children: React.ReactNode; hint?: Re
 /** CMS-02: gói hiện tại + 3 nút ghi, quota, ghi đè, chủ sở hữu, số liệu, feature. */
 export function OverviewTab({ ws }: { ws: AdminWorkspaceDetail }) {
   const { data: plans } = useAdminPlans();
+  // Một lượt gọi cho cả ô Album khách và dòng quota album. Chạy riêng, không đi chung với chi tiết
+  // workspace: nó chậm hay lỗi (503 khi framevis-drive không trả lời) thì trang không đợi nó.
+  const albums = useAdminWorkspaceAlbumSummary(ws.id);
+  // Lượt hỏi lỗi thì dòng quota về "chưa đo", kể cả khi lỗi là của một lần tải lại sau khi đã có số (khi
+  // đó query vẫn giữ số cũ). Ô Album khách ở Thống kê nhanh đọc cùng query và đã chuyển sang khung lỗi,
+  // nên hai nơi không được một bên báo lỗi còn một bên vẫn in con số cũ.
+  const albumUsage = albums.isError ? undefined : albums.data?.createdThisMonth;
   const plan = plans?.find((p) => p.code === ws.subscription.planCode);
   const [dialog, setDialog] = React.useState<'grant' | 'extend' | 'cancel' | null>(null);
   const hasLive = ws.subscription.status !== 'NONE';
@@ -121,7 +148,10 @@ export function OverviewTab({ ws }: { ws: AdminWorkspaceDetail }) {
           {quotaKeys.map((key) => {
             const unlimited = ws.entitlement.unlimitedKeys.includes(key);
             const limit = unlimited ? null : ws.entitlement.limits[key];
-            const usage = ws.usage[key];
+            // `null` từ backend nghĩa là "chưa đo", cùng nghĩa với vắng key: cả hai đều không vẽ thanh
+            // và không in "còn N", thay vì một thanh rỗng trông như chưa dùng gì.
+            const reported: number | null | undefined = ws.usage[key];
+            const usage = key === ALBUM_QUOTA_KEY ? albumUsage : (reported ?? undefined);
             const override = ws.limitOverrides.find((o) => o.limitKey === key);
             const full = limit !== null && usage !== undefined && usage >= limit;
             return (
@@ -130,7 +160,9 @@ export function OverviewTab({ ws }: { ws: AdminWorkspaceDetail }) {
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{LIMIT_LABEL[key] ?? key}</span>
                     <span className="font-mono text-[11px] text-muted-foreground">{key}</span>
-                    {usage === undefined && <InfoTip content="Chưa đo tại đây: số liệu này đếm ở dịch vụ khác." />}
+                    {usage === undefined && (
+                      <InfoTip content={key === ALBUM_QUOTA_KEY ? albumQuotaHint(albums) : UNMEASURED_HINT} />
+                    )}
                   </span>
                   <span className="font-mono text-xs">
                     {usage ?? '–'} / {limit === null ? 'Không giới hạn' : limit}
@@ -152,8 +184,9 @@ export function OverviewTab({ ws }: { ws: AdminWorkspaceDetail }) {
       <Card>
         <SectionTitle>Thống kê nhanh</SectionTitle>
         <CardContent className="grid grid-cols-2 gap-3">
-          {/* Chỉ Booking bấm được (nó có màn riêng); ba số còn lại giữ nguyên là chữ tĩnh, cùng cỡ
-              cùng vị trí — màu primary và mũi tên là thứ duy nhất tách nó ra. */}
+          {/* Chỉ Booking và Album khách bấm được (mỗi cái có tab riêng); ba số còn lại giữ nguyên là chữ
+              tĩnh, cùng cỡ cùng vị trí: màu primary và mũi tên là thứ duy nhất tách một ô bấm được ra.
+              Album khách có hàng riêng ở cuối vì số liệu của nó do framevis-drive tính, tải và lỗi riêng. */}
           <Link
             href={`/workspaces/${ws.id}?tab=booking`}
             className="group flex flex-col rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
@@ -174,6 +207,7 @@ export function OverviewTab({ ws }: { ws: AdminWorkspaceDetail }) {
               <span className="text-xs text-muted-foreground">{l}</span>
             </div>
           ))}
+          <AlbumQuickStat workspaceId={ws.id} summary={albums} />
         </CardContent>
       </Card>
 
