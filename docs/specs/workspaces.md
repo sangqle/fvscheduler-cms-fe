@@ -1,6 +1,6 @@
 # Workspaces
 
-Updated: 2026-09-20 · Thiết kế: CMS-01..04, CMS-08 · Backend: `ADM-FLOW-02, 03, 05, 06`
+Updated: 2026-10-28 · Thiết kế: CMS-01..04, CMS-08 · Backend: `ADM-FLOW-02, 03, 05, 06`
 
 ## Mục đích
 
@@ -18,7 +18,9 @@ chỉ đọc.
   (`useUrlState`; đổi filter reset `page`). Ô tìm debounce 500ms qua `useDebouncedSearch` (dùng chung mọi ô tìm; bỏ qua lần URL dội về từ chính lần commit nên không nuốt ký tự đang gõ).
 - Cột: ô tích chọn · `rawId` (khóa số của `workspace.id`, `RawId`) · Workspace (tên, loại, id
   ngắn) · Chủ sở hữu (tên, email hoặc "Chưa có tài khoản đăng
-  nhập") · TV · CN · Gói hiện tại (tên + badge nguồn + mã, hoặc "Chưa từng có gói") · Trạng thái ·
+  nhập") · TV · CN · Booking (`counts.bookings`:
+  booking chưa xóa mềm, mọi trạng thái kể cả đã hủy; số 0 lùi màu để quét nhanh workspace chưa có
+  booking nào) · Gói hiện tại (tên + badge nguồn + mã, hoặc "Chưa từng có gói") · Trạng thái ·
   Hết hạn (giờ + "còn/quá N ngày", đỏ khi quá, cam ≤ 7 ngày) · Tạo lúc.
 - Click hàng → `/workspaces/{id}?from=<query hiện tại đã encode>` (`detailHref`), để nút quay lại ở
   chi tiết trả đúng trang/bộ lọc đang xem. Rỗng sau lọc → `EmptyState` + "Xóa bộ lọc" (ghi chú PAST_DUE).

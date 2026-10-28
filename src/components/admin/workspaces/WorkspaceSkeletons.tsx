@@ -17,6 +17,7 @@ const COLUMNS = [
   { header: 'Chủ sở hữu', className: 'min-w-[14vw]' },
   { header: 'TV', className: 'w-12' },
   { header: 'CN', className: 'w-12' },
+  { header: 'Booking', className: 'w-16' },
   { header: 'Gói hiện tại' },
   { header: 'Trạng thái' },
   { header: 'Hết hạn' },

@@ -37,6 +37,8 @@ export interface AdminWorkspaceOwner {
 export interface AdminWorkspaceCounts {
   activeMembers: number;
   activeBranches: number;
+  /** Booking chưa xóa mềm, mọi trạng thái (kể cả đã hủy). 0 = workspace chưa có booking nào. */
+  bookings: number;
 }
 
 export interface AdminSubscriptionSummary {

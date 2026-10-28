@@ -98,6 +98,15 @@ const columns: ColumnDef<AdminWorkspaceRow>[] = [
   { id: 'members', header: 'TV', className: 'w-12 font-mono text-xs', cell: (w) => w.counts.activeMembers },
   { id: 'branches', header: 'CN', className: 'w-12 font-mono text-xs', cell: (w) => w.counts.activeBranches },
   {
+    id: 'bookings',
+    header: 'Booking',
+    className: 'w-16 font-mono text-xs',
+    // Cột này để quét mắt xem workspace đã dùng thật chưa, nên số 0 lùi màu cho hàng có booking nổi lên.
+    cell: (w) => (
+      <span className={cn(w.counts.bookings === 0 && 'text-muted-foreground')}>{w.counts.bookings}</span>
+    ),
+  },
+  {
     id: 'plan',
     header: 'Gói hiện tại',
     cell: (w) =>
