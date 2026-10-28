@@ -10,7 +10,6 @@ import {
   FileX,
   Info,
   Paperclip,
-  Stethoscope,
   Trash2,
   UserX,
   X,
@@ -28,6 +27,7 @@ import {
   BOOKING_PAYMENT_STATUS,
   BOOKING_PAYMENT_STATUS_LONG,
   CLIENT_ALBUM_ROLE,
+  MEMBERSHIP_STATUS,
 } from '@/lib/admin/labels';
 import { bookingLabel, bookingStaffing, sumOf } from '@/lib/admin/booking';
 import { cn, formatCurrency, formatDateTime, shortId } from '@/lib/utils';
@@ -44,6 +44,17 @@ function dayTime(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** `2026-10-01` → `10/2026`: khóa tháng là ngày đầu tháng, chỉ tháng và năm mới mang nghĩa. */
+function monthLabel(value: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(value);
+  return m ? `${m[2]}/${m[1]}` : value;
+}
+
+/** Nhãn tiếng Việt của trạng thái thành viên; giá trị lạ thì giữ nguyên chữ backend trả về. */
+function memberStatusLabel(status: string): string {
+  return status in MEMBERSHIP_STATUS ? MEMBERSHIP_STATUS[status as keyof typeof MEMBERSHIP_STATUS].label : status;
 }
 
 function Section({
@@ -70,7 +81,7 @@ function Section({
 
 function Hint({ children }: { children: React.ReactNode }) {
   return (
-    <Text variant="caption" muted className="font-mono" as="span">
+    <Text variant="caption" muted as="span">
       {children}
     </Text>
   );
@@ -92,37 +103,37 @@ function Note({ children, intent = 'muted' }: { children: React.ReactNode; inten
 }
 
 /**
- * Cặp "số lưu sẵn" và "cộng từ danh sách bên dưới".
+ * Cặp "số đã lưu trên booking" và "cộng từ danh sách bên dưới".
  *
  * Cố ý **không cờ, không màu phán xét**: màn này để người vận hành đặt hai con số cạnh nhau và tự
  * trừ, không phải để app tuyên bố dữ liệu của tenant sai. Lệch nhau hay không là câu người đọc kết
  * luận, sau khi nhìn cả hai.
  */
 function StoredVsSum({
+  label,
   storedValue,
-  storedKey,
-  sumLabel,
   sumValue,
-  sumKey,
+  sumCaption,
 }: {
+  /** Tên con số lưu sẵn: "Giá trị hợp đồng", "Đã thu", "Chi phí". */
+  label: string;
   storedValue: number;
-  storedKey: string;
-  sumLabel: string;
   sumValue: number;
-  sumKey: string;
+  /** Danh sách được cộng, ví dụ "giá chốt của 2 dịch vụ bên dưới". */
+  sumCaption: string;
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {[
-        { label: 'Hệ thống lưu sẵn', value: storedValue, key: storedKey },
-        { label: sumLabel, value: sumValue, key: sumKey },
+        { label, value: storedValue, caption: 'số đã lưu trên booking' },
+        { label: 'Cộng từ danh sách', value: sumValue, caption: sumCaption },
       ].map((tile) => (
-        <div key={tile.key} className="flex flex-col gap-0.5 rounded-xl border border-border p-2.5">
+        <div key={tile.label} className="flex flex-col gap-0.5 rounded-xl border border-border p-2.5">
           <span className="text-[11px] text-muted-foreground">{tile.label}</span>
           <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
             {formatCurrency(tile.value)}
           </span>
-          <span className="font-mono text-[10px] text-muted-foreground">{tile.key}</span>
+          <span className="text-[10px] text-muted-foreground">{tile.caption}</span>
         </div>
       ))}
     </div>
@@ -133,13 +144,13 @@ function CopyChip({ label, value }: { label: string; value: string }) {
   const { showToast } = useToast();
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border border-border px-2.5 py-1.5">
-      <span className="font-mono text-[11px] text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
       <button
         type="button"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(value);
-            showToast({ title: `Đã chép ${label}`, variant: 'success', duration: 2000 });
+            showToast({ title: `Đã chép ${value}`, variant: 'success', duration: 2000 });
           } catch {
             showToast({ title: 'Không chép được, hãy bôi đen để chép tay', variant: 'warning' });
           }
@@ -153,23 +164,36 @@ function CopyChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Mốc thời gian đặt cạnh đúng khóa tháng sinh ra nó: lệch giữa hai bên mới là thứ đáng nhìn. */
-function DiagnosticRow({ stamp, stampValue, month, monthValue }: { stamp: string; stampValue: string | null; month: string; monthValue: string | null }) {
+/** Mốc thời gian đặt cạnh đúng tháng báo cáo tính ra từ nó: lệch giữa hai bên mới là thứ đáng nhìn. */
+function DiagnosticRow({
+  stamp,
+  stampValue,
+  stampEmpty = 'chưa có',
+  month,
+  monthValue,
+}: {
+  stamp: string;
+  stampValue: string | null;
+  /** Chữ thay cho mốc trống; dòng đã xóa dùng nó để nói vì sao trống. */
+  stampEmpty?: string;
+  month: string;
+  monthValue: string | null;
+}) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {[
-        { key: stamp, value: stampValue ? formatDateTime(stampValue) : 'null' },
-        { key: month, value: monthValue ?? 'null' },
+        { key: stamp, value: stampValue ? formatDateTime(stampValue) : null, empty: stampEmpty },
+        { key: month, value: monthValue ? monthLabel(monthValue) : null, empty: 'chưa có' },
       ].map((cell) => (
         <div key={cell.key} className="flex items-center justify-between gap-2 rounded-lg bg-muted px-2.5 py-1.5">
-          <span className="font-mono text-[11px] text-muted-foreground">{cell.key}</span>
+          <span className="text-[11px] text-muted-foreground">{cell.key}</span>
           <span
             className={cn(
-              'font-mono text-[11px] tabular-nums',
-              cell.value === 'null' ? 'text-muted-foreground/70' : 'text-foreground',
+              'text-[11px] tabular-nums',
+              cell.value ? 'font-mono text-foreground' : 'text-muted-foreground/70',
             )}
           >
-            {cell.value}
+            {cell.value ?? cell.empty}
           </span>
         </div>
       ))}
@@ -211,13 +235,12 @@ function SessionCard({ session, index, isMirrorSource }: { session: BookingSessi
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-xs font-semibold text-foreground">{session.name ?? `Buổi ${session.seq ?? index + 1}`}</span>
           <span className="font-mono text-[11px] text-muted-foreground">
-            {dayTime(session.startAt)} → {hhmm(session.endAt)} · room {session.roomId ? shortId(session.roomId) : 'null'} ·
-            shift {session.shiftId ? shortId(session.shiftId) : 'null'}
+            {dayTime(session.startAt)} → {hhmm(session.endAt)} ·{' '}
+            {session.roomId ? `phòng ${shortId(session.roomId)}` : 'chưa xếp phòng'} ·{' '}
+            {session.shiftId ? `ca ${shortId(session.shiftId)}` : 'chưa xếp ca'}
           </span>
         </span>
-        {isMirrorSource && (
-          <span className="shrink-0 text-[10px] text-primary">nguồn của bản sao cấp trên</span>
-        )}
+        {isMirrorSource && <span className="shrink-0 text-[10px] text-primary">Buổi chính</span>}
       </div>
       {(session.shootingLocation?.label || session.note) && (
         <p className="text-[11px] leading-snug text-muted-foreground">
@@ -238,7 +261,7 @@ function SessionCard({ session, index, isMirrorSource }: { session: BookingSessi
               ) : (
                 <Badge variant="warning" size="sm" mono={false} className="gap-1.5">
                   <UserX className="size-2.5" />
-                  Chưa ai nhận
+                  Còn trống
                   {slot.role?.code && <span className="font-mono text-[9.5px] opacity-75">{slot.role.code}</span>}
                 </Badge>
               )}
@@ -306,12 +329,12 @@ export function BookingDrawer({
               <span className="font-mono">{shortId(meta.id)}</span>
               {booking ? (
                 <>
-                  {' · '}Tạo {formatDateTime(booking.createdAt)}
+                  {' · '}Tạo lúc {formatDateTime(booking.createdAt)}
                   {booking.createdByMembership?.displayName && ` bởi ${booking.createdByMembership.displayName}`}
-                  {' · '}Sửa {formatDateTime(booking.updatedAt)}
+                  {' · '}Sửa lần cuối {formatDateTime(booking.updatedAt)}
                 </>
               ) : (
-                meta.deletedAt && <> · Xóa {formatDateTime(meta.deletedAt)}</>
+                meta.deletedAt && <> · Xóa lúc {formatDateTime(meta.deletedAt)}</>
               )}
             </Text>
           )}
@@ -355,20 +378,21 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Section title="Booking này">
+      <Section title="Thông tin chung">
         <KeyValueList>
-          <KeyValue label="Ngày chụp">
+          <KeyValue label="Lịch chụp">
             <span className="font-mono text-xs">{formatDateTime(booking.startAt)} → {hhmm(booking.endAt)}</span>{' '}
-            <span className="text-xs text-muted-foreground">· bản sao của buổi 1, xem khối Buổi chụp</span>
+            <span className="text-xs text-muted-foreground">· theo buổi chính</span>
           </KeyValue>
           <KeyValue label="Chi nhánh">
             <span className="font-mono text-xs">{booking.branchId ? shortId(booking.branchId) : '—'}</span>
           </KeyValue>
-          <KeyValue label="Phòng · Ca">
+          <KeyValue label="Phòng, ca">
             <span className="font-mono text-xs">
-              {booking.roomId ? shortId(booking.roomId) : 'null'} · {booking.shiftId ? shortId(booking.shiftId) : 'null'}
+              {booking.roomId ? shortId(booking.roomId) : 'chưa xếp phòng'} ·{' '}
+              {booking.shiftId ? shortId(booking.shiftId) : 'chưa xếp ca'}
             </span>{' '}
-            <span className="text-xs text-muted-foreground">· cũng là bản sao của buổi 1</span>
+            <span className="text-xs text-muted-foreground">· theo buổi chính</span>
           </KeyValue>
           <KeyValue label="Địa điểm">
             {booking.shootingLocation?.label ?? '—'}
@@ -390,7 +414,10 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
           <KeyValue label="Người tạo">
             {booking.createdByMembership?.displayName ?? '—'}
             {booking.createdByMembership?.status && (
-              <span className="text-xs text-muted-foreground"> · {booking.createdByMembership.status}</span>
+              <span className="text-xs text-muted-foreground">
+                {' '}
+                · {memberStatusLabel(booking.createdByMembership.status)}
+              </span>
             )}
           </KeyValue>
           <KeyValue label="Lãi gộp">
@@ -399,33 +426,40 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
             ) : (
               <>
                 <span className="font-mono text-xs font-semibold">{formatCurrency(booking.grossProfit)}</span>{' '}
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  grossProfit = contractTotal − costTotal
-                </span>
+                <span className="text-xs text-muted-foreground">· giá trị hợp đồng trừ chi phí</span>
               </>
             )}
           </KeyValue>
-          <KeyValue label="extInfo">
-            <span className="font-mono text-xs text-muted-foreground">
-              {booking.extInfo && Object.keys(booking.extInfo).length > 0
-                ? JSON.stringify(booking.extInfo)
-                : '{} rỗng'}
-            </span>
+          {/* ext_info: túi metadata cho tích hợp bên ngoài, hệ thống không tự đọc. */}
+          <KeyValue label="Dữ liệu tích hợp">
+            {booking.extInfo && Object.keys(booking.extInfo).length > 0 ? (
+              <span className="font-mono text-xs text-muted-foreground">{JSON.stringify(booking.extInfo)}</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Không có</span>
+            )}
           </KeyValue>
         </KeyValueList>
       </Section>
 
       <Section title="Khách hàng">
         {booking.client ? (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-foreground">{booking.client.name ?? '—'}</span>
-            <span className="font-mono text-xs text-muted-foreground">{booking.client.phone ?? '—'}</span>
-            <span className="text-xs text-muted-foreground">{booking.client.email ?? '—'}</span>
-            <span className="font-mono text-[11px] text-muted-foreground">
-              {shortId(booking.client.id)}
-              {booking.client.branchId && ` · chi nhánh ${shortId(booking.client.branchId)}`}
-            </span>
-          </div>
+          <KeyValueList>
+            <KeyValue label="Tên">
+              <span className="font-semibold">{booking.client.name ?? '—'}</span>
+            </KeyValue>
+            <KeyValue label="Điện thoại">
+              <span className="font-mono text-xs">{booking.client.phone ?? '—'}</span>
+            </KeyValue>
+            <KeyValue label="Email">{booking.client.email ?? '—'}</KeyValue>
+            <KeyValue label="Chi nhánh">
+              <span className="font-mono text-xs">
+                {booking.client.branchId ? shortId(booking.client.branchId) : '—'}
+              </span>
+            </KeyValue>
+            <KeyValue label="Id khách">
+              <span className="font-mono text-xs">{shortId(booking.client.id)}</span>
+            </KeyValue>
+          </KeyValueList>
         ) : (
           <Text variant="body-sm" muted>
             Booking không gắn khách hàng nào.
@@ -433,26 +467,25 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
         )}
       </Section>
 
-      <Section title="Dòng dịch vụ" hint={<Hint>booking.items[]</Hint>}>
+      <Section title="Dịch vụ">
         <StoredVsSum
+          label="Giá trị hợp đồng"
           storedValue={meta.totals.contractTotal}
-          storedKey="admin.totals.contractTotal"
-          sumLabel={`Cộng ${booking.items.length} dòng bên dưới`}
           sumValue={itemsSum}
-          sumKey="Σ items[].unitPriceSnapshot"
+          sumCaption={`giá chốt của ${booking.items.length} dịch vụ bên dưới`}
         />
         {booking.items.length === 0 ? (
           <Text variant="body-sm" muted>
-            Booking chưa có dòng dịch vụ nào.
+            Booking chưa có dịch vụ nào.
           </Text>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <th className="py-1.5 pr-2 font-medium">nameSnapshot</th>
-                  <th className="py-1.5 pr-2 font-medium">itemType</th>
-                  <th className="py-1.5 pr-2 text-right font-medium">listPrice</th>
+                  <th className="py-1.5 pr-2 font-medium">Tên dịch vụ</th>
+                  <th className="py-1.5 pr-2 font-medium">Loại</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">Giá niêm yết</th>
                   <th className="py-1.5 text-right font-medium">Giá chốt</th>
                 </tr>
               </thead>
@@ -466,10 +499,10 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
                       </Badge>
                     </td>
                     <td className="py-2 pr-2 text-right font-mono tabular-nums text-muted-foreground">
-                      {item.listPrice == null ? 'null' : formatCurrency(item.listPrice)}
+                      {item.listPrice == null ? '—' : formatCurrency(item.listPrice)}
                     </td>
                     <td className="py-2 text-right font-mono font-semibold tabular-nums text-foreground">
-                      {item.unitPriceSnapshot == null ? 'null' : formatCurrency(item.unitPriceSnapshot)}
+                      {item.unitPriceSnapshot == null ? '—' : formatCurrency(item.unitPriceSnapshot)}
                     </td>
                   </tr>
                 ))}
@@ -479,13 +512,12 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
         )}
       </Section>
 
-      <Section title="Phiếu thu" hint={<Hint>payments[]</Hint>}>
+      <Section title="Phiếu thu">
         <StoredVsSum
+          label="Đã thu"
           storedValue={meta.totals.paidAmount}
-          storedKey="paidAmount"
-          sumLabel={`Cộng ${booking.payments.length} phiếu`}
           sumValue={paymentsSum}
-          sumKey="Σ payments[]"
+          sumCaption={`${booking.payments.length} phiếu thu bên dưới`}
         />
         {booking.payments.length === 0 ? (
           <Text variant="body-sm" muted>
@@ -498,7 +530,7 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="text-xs font-medium text-foreground">{BOOKING_PAYMENT_KIND[p.kind]}</span>
                   <span className="font-mono text-[11px] text-muted-foreground">
-                    {p.kind} · {p.paidAt ? dayTime(p.paidAt) : 'chưa ghi ngày'}
+                    {p.paidAt ? dayTime(p.paidAt) : 'chưa ghi ngày'}
                   </span>
                 </span>
                 <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
@@ -511,38 +543,33 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
         )}
       </Section>
 
-      <Section title="Buổi chụp" hint={<Hint>sessions[] · nguồn thật của lịch</Hint>}>
+      <Section title="Buổi chụp">
         <ul className="flex flex-col gap-2">
           {booking.sessions.map((s, i) => (
             <SessionCard
               key={s.id}
               session={s}
               index={i}
-              // Buổi 1 được tô nền tint để đối chiếu thẳng với khối "Booking này": một bản sao cũ
-              // sai sẽ lộ ngay tại đây.
+              // Buổi chính được tô nền tint để đối chiếu thẳng với khối "Thông tin chung": một bản
+              // sao cũ sai sẽ lộ ngay tại đây.
               isMirrorSource={i === 0 && !!first}
             />
           ))}
         </ul>
-        <Note>
-          <span className="font-mono">booking.startAt</span>, <span className="font-mono">endAt</span>,{' '}
-          <span className="font-mono">roomId</span>, <span className="font-mono">shiftId</span> ở cấp trên chỉ chép lại
-          buổi 1.
-        </Note>
+        <Note>Lịch chụp, phòng và ca ở mục Thông tin chung lấy theo buổi chính.</Note>
       </Section>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Section title="Nhân sự thuê ngoài" hint={<Hint>freelancers[]</Hint>}>
+        <Section title="Nhân sự thuê ngoài">
           <StoredVsSum
+            label="Chi phí"
             storedValue={meta.totals.costTotal}
-            storedKey="costTotal"
-            sumLabel={`Cộng ${booking.freelancers.length} người`}
             sumValue={freelancerSum}
-            sumKey="Σ freelancers[]"
+            sumCaption={`${booking.freelancers.length} người thuê ngoài bên dưới`}
           />
           {booking.freelancers.length === 0 ? (
             <Text variant="body-sm" muted>
-              Không thuê ngoài ai.
+              Booking không thuê người ngoài.
             </Text>
           ) : (
             <ul className="flex flex-col gap-1.5">
@@ -563,12 +590,12 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
             </ul>
           )}
           <Note>
-            Người thuê ngoài không có tài khoản trong hệ thống, khác hẳn <span className="font-mono">slots[]</span> ở
-            khối Buổi chụp ({staffing.assigned}/{staffing.total} chỗ đã có người).
+            Người thuê ngoài không có tài khoản trong hệ thống, khác với nhân sự được phân công ở mục Buổi chụp (
+            {staffing.assigned}/{staffing.total} vị trí đã có người).
           </Note>
         </Section>
 
-        <Section title="Album khách" hint={<Hint>clientAlbums[]</Hint>}>
+        <Section title="Album khách">
           {booking.clientAlbums.length === 0 ? (
             <Text variant="body-sm" muted>
               Chưa gắn album nào.
@@ -588,11 +615,11 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
               ))}
             </ul>
           )}
-          <Note>API chỉ trả id và vai trò, không có tên album.</Note>
+          <Note>Album lưu ở hệ thống ảnh riêng nên ở đây chỉ có mã và vai trò, không có tên album.</Note>
         </Section>
       </div>
 
-      <Section title="Ghi chú" hint={<Hint>notes[] · mới nhất trước</Hint>}>
+      <Section title="Ghi chú" hint={<Hint>Mới nhất ở trên</Hint>}>
         {booking.notes.length === 0 ? (
           <Text variant="body-sm" muted>
             Chưa có ghi chú nào.
@@ -615,11 +642,11 @@ function LiveBody({ row }: { row: AdminBookingRow }) {
 /** Dòng đã tombstone: chỉ còn nửa `admin`, nên các con số đứng một mình. */
 function DeletedBody({ row }: { row: AdminBookingRow }) {
   const meta = row.admin;
-  const tiles: { label: string; value: number; key: string }[] = [
-    { label: 'Giá trị hợp đồng', value: meta.totals.contractTotal, key: 'contractTotal' },
-    { label: 'Đã thu', value: meta.totals.paidAmount, key: 'paidAmount' },
-    { label: 'Còn lại', value: meta.totals.outstandingAmount, key: 'outstandingAmount' },
-    { label: 'Chi phí', value: meta.totals.costTotal, key: 'costTotal' },
+  const tiles: { label: string; value: number }[] = [
+    { label: 'Giá trị hợp đồng', value: meta.totals.contractTotal },
+    { label: 'Đã thu', value: meta.totals.paidAmount },
+    { label: 'Còn lại', value: meta.totals.outstandingAmount },
+    { label: 'Chi phí', value: meta.totals.costTotal },
   ];
 
   return (
@@ -627,38 +654,35 @@ function DeletedBody({ row }: { row: AdminBookingRow }) {
       <p className="flex items-start gap-2.5 rounded-2xl border border-dashed border-muted-foreground/50 bg-card p-3.5 text-xs leading-relaxed text-foreground">
         <FileX className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <span>
-          Booking này đã bị xóa mềm nên <span className="font-mono">booking = null</span>: không còn tên, khách hàng,
-          dòng dịch vụ, phiếu thu, buổi chụp, nhân sự hay ghi chú để hiển thị. Xóa booking là tombstone cả cây con.
-          Những gì còn lại đều nằm ở nửa <span className="font-mono">admin</span>, đủ để tra rollup và đối chiếu trong DB.
+          Booking này đã bị xóa nên không còn tên, khách hàng, dịch vụ, phiếu thu, buổi chụp, nhân sự hay ghi chú để
+          hiển thị. Dữ liệu vẫn nằm trong cơ sở dữ liệu: ở đây còn các số tiền đã lưu, các mốc thời gian và id để đối
+          chiếu.
         </span>
       </p>
 
-      <Section title="Bốn cột tổng hợp còn lưu" hint={<Hint>admin.totals</Hint>}>
+      <Section title="Số tiền đã lưu">
         <div className="grid grid-cols-2 gap-2">
           {tiles.map((t) => (
-            <div key={t.key} className="flex flex-col gap-0.5 rounded-xl border border-border p-2.5">
+            <div key={t.label} className="flex flex-col gap-0.5 rounded-xl border border-border p-2.5">
               <span className="text-[11px] text-muted-foreground">{t.label}</span>
               <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                 {formatCurrency(t.value)}
               </span>
-              <span className="font-mono text-[10px] text-muted-foreground">{t.key}</span>
             </div>
           ))}
         </div>
         <Note>
-          Ở dòng còn sống, mỗi con số này đứng ngay trên danh sách sinh ra nó. Ở đây không còn{' '}
-          <span className="font-mono">items[]</span>, <span className="font-mono">payments[]</span> hay{' '}
-          <span className="font-mono">freelancers[]</span> để đặt cạnh, nên chúng đứng một mình: đó là giá trị lưu tại
-          thời điểm xóa.
+          Với booking chưa xóa, mỗi số này nằm cạnh danh sách tạo ra nó để đối chiếu. Booking đã xóa không còn các danh
+          sách đó, nên đây là giá trị lưu lúc xóa.
         </Note>
       </Section>
 
-      <Section title="Người xóa">
+      <Section title="Thông tin xóa">
         <KeyValueList>
-          <KeyValue label="Thời điểm">
+          <KeyValue label="Xóa lúc">
             <span className="font-mono text-xs">{meta.deletedAt ? formatDateTime(meta.deletedAt) : '—'}</span>
           </KeyValue>
-          <KeyValue label="deletedByMembershipId">
+          <KeyValue label="Người xóa">
             <span className="font-mono text-xs">
               {meta.deletedByMembershipId ? shortId(meta.deletedByMembershipId) : '—'}
             </span>
@@ -675,32 +699,25 @@ function DeletedBody({ row }: { row: AdminBookingRow }) {
 function DiagnosticsSection({ row, withStartAt }: { row: AdminBookingRow; withStartAt: boolean }) {
   const meta = row.admin;
   return (
-    <Section
-      title="Chẩn đoán"
-      hint={
-        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-          <Stethoscope className="size-3" aria-hidden />
-          không phải dữ liệu nghiệp vụ
-        </span>
-      }
-    >
-      {withStartAt && row.booking && (
-        <DiagnosticRow stamp="startAt" stampValue={row.booking.startAt} month="revenueMonth" monthValue={meta.revenueMonth} />
-      )}
-      <DiagnosticRow stamp="confirmedAt" stampValue={meta.confirmedAt} month="signedMonth" monthValue={meta.signedMonth} />
+    <Section title="Tháng báo cáo">
       <DiagnosticRow
-        stamp="completedAt"
+        stamp="Ngày chụp"
+        stampValue={withStartAt && row.booking ? row.booking.startAt : null}
+        stampEmpty="đã xóa"
+        month="Tháng chụp"
+        monthValue={meta.revenueMonth}
+      />
+      <DiagnosticRow stamp="Xác nhận lúc" stampValue={meta.confirmedAt} month="Tháng ký" monthValue={meta.signedMonth} />
+      <DiagnosticRow
+        stamp="Hoàn tất lúc"
         stampValue={meta.completedAt}
-        month="recognitionMonth"
+        month="Tháng ghi nhận"
         monthValue={meta.recognitionMonth}
       />
-      {!withStartAt && (
-        <DiagnosticRow stamp="revenueMonth" stampValue={null} month="revenueMonth" monthValue={meta.revenueMonth} />
-      )}
       <Note>
         {withStartAt
-          ? 'Mỗi khóa tháng đặt cạnh đúng cái mốc sinh ra nó, vì lệch giữa hai bên mới là thứ đáng nhìn.'
-          : 'Không còn startAt để đặt cạnh revenueMonth, nên khóa tháng ở đây chỉ đọc được một chiều.'}
+          ? 'Mỗi tháng báo cáo tính từ mốc thời gian đứng cạnh nó. Hai bên lệch nhau là chỗ nên xem lại.'
+          : 'Booking đã xóa không còn ngày chụp, nên tháng chụp ở đây không đối chiếu được.'}
       </Note>
     </Section>
   );
@@ -709,22 +726,22 @@ function DiagnosticsSection({ row, withStartAt }: { row: AdminBookingRow; withSt
 function TechnicalIdsSection({ row }: { row: AdminBookingRow }) {
   const meta = row.admin;
   const chips: { label: string; value: number | string | null | undefined }[] = [
-    { label: 'rawId', value: meta.rawId },
-    { label: 'rawBranchId', value: meta.rawBranchId },
-    { label: 'rawClientId', value: meta.rawClientId },
-    { label: 'rawRoomId', value: meta.rawRoomId },
-    { label: 'rawShiftId', value: meta.rawShiftId },
-    { label: 'rawCreatedBy', value: meta.rawCreatedByMembershipId },
-    { label: 'rawDeletedBy', value: meta.rawDeletedByMembershipId },
-    { label: 'id opaque', value: meta.id },
+    { label: 'Booking', value: meta.rawId },
+    { label: 'Chi nhánh', value: meta.rawBranchId },
+    { label: 'Khách hàng', value: meta.rawClientId },
+    { label: 'Phòng', value: meta.rawRoomId },
+    { label: 'Ca', value: meta.rawShiftId },
+    { label: 'Người tạo', value: meta.rawCreatedByMembershipId },
+    { label: 'Người xóa', value: meta.rawDeletedByMembershipId },
+    { label: 'Id mờ (dùng trong URL)', value: meta.id },
   ];
   return (
     <Section
-      title="Id kỹ thuật"
+      title="Id trong cơ sở dữ liệu"
       hint={
         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
           <Database className="size-3" aria-hidden />
-          khóa chính trong DB · dùng để chạy SQL đối chiếu
+          bấm để chép, dán vào câu SQL
         </span>
       }
     >
@@ -736,8 +753,9 @@ function TechnicalIdsSection({ row }: { row: AdminBookingRow }) {
           ))}
       </div>
       <Note intent="info">
-        Id thô <b className="font-semibold">không gọi API được</b>, mọi URL vẫn phải dùng id opaque. Chúng chỉ để dán vào
-        câu SQL khi cần đối chiếu thẳng trong DB. Trường nào null thì không hiện ô.
+        Id số chỉ để dán vào câu SQL khi đối chiếu trong cơ sở dữ liệu,{' '}
+        <b className="font-semibold">không dùng được với API</b>: đường dẫn và API luôn dùng id mờ. Mục nào không có giá
+        trị thì không hiện.
       </Note>
     </Section>
   );

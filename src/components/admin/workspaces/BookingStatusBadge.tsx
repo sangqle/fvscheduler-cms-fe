@@ -20,7 +20,10 @@ export function BookingStatusBadge({ status, showStep = true }: { status: Bookin
     <Badge variant={bookingStatusVariant(status)} size="sm" mono={false} className="gap-1.5">
       {BOOKING_STATUS_LABEL[status]}
       {showStep && step > 0 && (
-        <span className="font-mono text-[9.5px] font-medium opacity-75">
+        <span
+          className="font-mono text-[9.5px] font-medium opacity-75"
+          title={`Bước ${step} trên ${BOOKING_LIFECYCLE.length} của quy trình booking`}
+        >
           {step}/{BOOKING_LIFECYCLE.length}
         </span>
       )}

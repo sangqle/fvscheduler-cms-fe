@@ -67,13 +67,15 @@ chỉ đọc.
     còn. Dòng đó **không bị làm mờ**, nó chỉ có rail xám đậm bên trái và nhãn ĐÃ XÓA: làm mờ thì mất
     luôn công dụng của cái công tắc người ta vừa bật để xem nó.
   - `BookingDrawer` (`SlideOver`, prev/next trong trang đang xem, không gọi API thêm vì dữ liệu đã
-    nằm sẵn trong dòng): Booking này (bản sao lịch, chi nhánh, phòng·ca, địa điểm, người tạo,
-    `grossProfit`, `extInfo`) · Khách hàng · Dòng dịch vụ · Phiếu thu · Buổi chụp (buổi 1 tô tint vì
-    nó là nguồn của bản sao cấp trên) · Nhân sự thuê ngoài · Album khách · Ghi chú (cắt 3 dòng, mở
-    tại chỗ, nhãn theo `audience`) · Chẩn đoán · Id kỹ thuật (copy raw id).
+    nằm sẵn trong dòng): Thông tin chung (lịch chụp, chi nhánh, phòng và ca lấy theo buổi chính, địa
+    điểm, người tạo, lãi gộp, dữ liệu tích hợp = `extInfo`) · Khách hàng (tên, điện thoại, email, chi
+    nhánh, id) · Dịch vụ · Phiếu thu · Buổi chụp (buổi chính tô tint vì lịch ở Thông tin chung lấy từ
+    nó) · Nhân sự thuê ngoài · Album khách · Ghi chú (cắt 3 dòng, mở tại chỗ, nhãn theo `audience`) ·
+    Tháng báo cáo (ngày chụp ↔ tháng chụp, xác nhận ↔ tháng ký, hoàn tất ↔ tháng ghi nhận) · Id trong
+    cơ sở dữ liệu (chép id số).
     Ba khối tiền đặt **số lưu sẵn cạnh tổng của danh sách sinh ra nó** (`contractTotal` ↔ `items[]`,
     `paidAmount` ↔ `payments[]`, `costTotal` ↔ `freelancers[]`), không cờ, không màu phán xét.
-    Dòng đã xóa chỉ còn nửa `admin`: bốn cột tổng hợp đứng một mình, người xóa, chẩn đoán, id.
+    Dòng đã xóa chỉ còn nửa `admin`: số tiền đã lưu đứng một mình, thông tin xóa, tháng báo cáo, id.
   - Rỗng: chưa có booking nào → `EmptyState` + link tab Thành viên; lọc không ra gì → `EmptyState` +
     "Xóa bộ lọc".
 - **Thành viên** `MembersTab`: `FilterSelect` trạng thái + DataTable phân trang server, chỉ đọc.
@@ -120,6 +122,9 @@ Invalidate `detail(id)` cũng bắt lịch sử/thành viên vì key lồng dư�
 
 ## Rule FE phải giữ
 
+- Nhãn trong `BookingDrawer` viết bằng tiếng Việt nghiệp vụ, **không lộ tên trường API**
+  (`items[]`, `unitPriceSnapshot`, `grossProfit = …`): người đọc là người vận hành, không phải người
+  đọc code. Enum backend (`PACKAGE`, `PROOFING`, mã vai trò) vẫn giữ chữ hoa mono.
 - `subscription.status` là **suy theo đồng hồ**; không tự tính lại từ `expiresAt` ở FE ngoài
   nhãn "còn/quá N ngày".
 - Grant: `source` không được là `SEPAY`; `expiresAt` tương lai; gói ngừng bán vẫn chọn được.
