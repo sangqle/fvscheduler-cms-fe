@@ -32,10 +32,11 @@ src/app/(admin)/plans, [planCode]             # CMS-07 (?tab=plans|items|vocabul
 src/app/(admin)/coupons, [code]               # mã giảm giá (?status=&q=; chi tiết ?page= của sổ lượt dùng)
 src/app/(admin)/mail, templates/[code], campaigns/[campaignCode]  # CMS-10..14 (?tab=templates|campaigns|messages)
 src/app/(admin)/affiliate                     # chưa có mã CMS (?tab=payouts|commissions|rates)
+src/app/(admin)/client-albums                 # album khách, chỉ đọc (?tab=monthly|storage; spec docs/specs/client-albums.md)
 src/app/(admin)/utils                         # tiện ích vận hành (giải mã id mờ → rawId)
 src/app/forbidden                             # 403 allowlist
 src/components/ui/                            # primitives (KHÔNG style tại feature)
-src/components/admin/{layout,shared,workspaces,orders,plans,coupons,mail,affiliate,utils}/
+src/components/admin/{layout,shared,workspaces,orders,plans,coupons,mail,affiliate,client-albums,utils}/
 src/hooks/useAdmin*.ts                        # TanStack hooks, query key ở đầu mỗi file
 src/hooks/useUrlState.ts                      # filter/phân trang sống trên URL
 src/lib/api/http.ts                           # apiFetch duy nhất (envelope, ApiError, 401/429 events)
