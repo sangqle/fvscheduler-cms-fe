@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { InfoTip } from '@/components/ui/InfoTip';
+import { RawId } from '@/components/admin/shared/RawId';
 import {
   AlbumWorkspaceCell,
   useAlbumWorkspaceHref,
@@ -56,6 +57,8 @@ export function StorageTable({ rows, range }: { rows: AdminAlbumStorageRow[]; ra
   const rowHref = (r: AdminAlbumStorageRow) => albumHref(r.workspace, range);
 
   const columns: ColumnDef<AdminAlbumStorageRow>[] = [
+    // Cột đầu tiên như danh sách workspace; dòng "Không thuộc workspace" không có khóa số nên ô trống.
+    { id: 'rawId', header: 'rawId', className: 'w-20', cell: (r) => <RawId value={r.workspace?.rawId} /> },
     {
       id: 'workspace',
       header: 'Workspace',

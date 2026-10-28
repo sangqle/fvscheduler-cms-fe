@@ -49,9 +49,9 @@ cột booking liên kết hay công tắc hiện album đã xóa ở tab của w
   bấm; mở link có sẵn `month` thì không cuộn). Khung hiện ngay dưới bảng, trên cùng trang: không drawer, không trang mới.
 - `MonthWorkspacesPanel`: "Workspace tạo album trong Tháng MM/yyyy" + nút Đóng. Gọi `workspaces` với `from`/`to` là ngày đầu
   và ngày cuối của tháng (số học lịch trên chuỗi `yyyy-MM`, `monthDayKeys`), nhiều album nhất trước, phân trang server. Cột:
-  Workspace (`AlbumWorkspaceCell`) · Gói (`PlanCell`) · Album tạo · Đã xóa sau đó. Đổi tháng hay trang thì khung mờ đi
-  (`keepPreviousData`); trang quá cuối (link cũ) tự về trang đầu. Bấm dòng hoặc tên workspace mở tab Album khách của workspace
-  với khoảng là chính tháng đó.
+  `rawId` (`RawId`) · Workspace (`AlbumWorkspaceCell`) · Gói (`PlanCell`) · Album tạo · Đã xóa sau đó. Đổi tháng hay trang
+  thì khung mờ đi (`keepPreviousData`); trang quá cuối (link cũ) tự về trang đầu. Bấm dòng hoặc tên workspace mở tab Album khách
+  của workspace với khoảng là chính tháng đó.
 - Trạng thái tab: loading = `MonthlyTabSkeleton` lượt đầu (hàng chọn + bảng 7 dòng), sau đó giữ bảng cũ mờ đi · empty = "Chưa có
   album nào được tạo trong khoảng này" · error = `ErrorState` + "Thử lại" (đang thử lại thì hiện khung xương bảng, hàng chọn
   tháng vẫn dùng được). Khung workspace có đủ bốn trạng thái riêng: skeleton · empty khi tháng không có album (**không gọi route**)
@@ -75,7 +75,7 @@ cột booking liên kết hay công tắc hiện album đã xóa ở tab của w
   cache), để bấm Back từ chi tiết workspace không phải quét lại.
 - Kết quả (`StorageResult`): dòng "Tính lúc <ngày giờ Việt Nam> · Ảnh có dung lượng: N%" (kèm nhắc khi bộ lọc đang soạn đã khác kết quả)
   · `AlbumTotalsStrip` (dùng chung với tab của workspace, phủ MỌI workspace của khoảng, ghi rõ khoảng và workspace lúc BẤM) · "Dung lượng
-  theo workspace" (`StorageTable`): Workspace · Gói · Album (kèm "N album NAS" khi có) · Ảnh · Dung lượng · Dung lượng album cho phép
+  theo workspace" (`StorageTable`): `rawId` · Workspace · Gói · Album (kèm "N album NAS" khi có) · Ảnh · Dung lượng · Dung lượng album cho phép
   tải · Độ phủ (chỉ phần trăm, ô trống khi không có ảnh). Nặng nhất trước, kể cả dòng "Không thuộc workspace"; phân trang ở máy
   20|50|100 (mặc định 20), về trang đầu sau mỗi lượt tính. Bấm dòng hoặc tên mở tab Album khách của workspace với khoảng ngày mà kết quả
   này ĐÃ ĐƯỢC TÍNH (không phải bộ lọc đang sửa). `rows.totalElements` lớn hơn 100 thì nói thẳng "Chỉ liệt kê N workspace có dung lượng
@@ -136,8 +136,9 @@ lồng dưới `workspaceKeys.detail(id)` như `bookingKeys`, nên cấp / gia h
   `alSize` (`ALBUM_TAB_KEYS` và `WORKSPACE_ALBUM_TAB` ở `lib/admin/clientAlbums.ts`, vì hai màn cùng dùng). Không dùng khóa trần của danh sách
   workspace (`q`, `type`, `page`, `size`, `sort`...) và **không dùng `from` cho một ngày**: `from` là khóa đường về. Giá trị sai dạng coi như không có.
 - **Ba loại dòng workspace** (`albumWorkspaceKind`, `AlbumWorkspaceCell`): `personal` (`workspace` null: "Không thuộc workspace" + InfoTip, không
-  link); `missing` (`exists = false`: framevis-drive còn album nhưng ERP không còn workspace, hiện "Workspace không còn tồn tại" + `RawId`, không
-  link); `live` (tên là link thật, `RawId` ngay dưới). Chỉ `live` mới link; bảng đánh dấu phần còn lại bằng `isRowDisabled`. Link chặn nổi bọt vì cả
+  link); `missing` (`exists = false`: framevis-drive còn album nhưng ERP không còn workspace, hiện "Workspace không còn tồn tại", không
+  link); `live` (tên là link thật). Khóa số không nằm trong ô này mà ở cột `rawId` (`RawId`) đứng đầu mọi bảng thống kê, cùng convention
+  danh sách workspace; dòng `personal` để trống ô đó. Chỉ `live` mới link; bảng đánh dấu phần còn lại bằng `isRowDisabled`. Link chặn nổi bọt vì cả
   hàng cũng bấm được, không thì một lần bấm điều hướng hai lần. `PlanCell` cùng khuôn với cột Gói hiện tại của danh sách workspace và chỉ vẽ gói
   (không vẽ trạng thái): ô trống khi không có workspace sống, "Chưa từng có gói" khi `planCode` rỗng.
 - **Link vào chi tiết workspace** là `detailHref(workspaceAlbumsHref(id, khoảng), searchParams)`, tức `/workspaces/{id}?tab=albums&alFrom=&alTo=&from=<query

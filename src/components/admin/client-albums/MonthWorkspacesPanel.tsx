@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Heading } from '@/components/ui/Heading';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/admin/shared/QueryState';
+import { RawId } from '@/components/admin/shared/RawId';
 import { AlbumWorkspaceCell, useAlbumWorkspaceHref } from '@/components/admin/client-albums/AlbumWorkspaceCell';
 import { MonthPanelTableSkeleton } from '@/components/admin/client-albums/ClientAlbumSkeletons';
 import {
@@ -75,6 +76,8 @@ export function MonthWorkspacesPanel({
   const rowHref = (r: AdminAlbumWorkspaceCountRow) => albumHref(r.workspace, days);
 
   const columns: ColumnDef<AdminAlbumWorkspaceCountRow>[] = [
+    // Cột đầu tiên như danh sách workspace; dòng "Không thuộc workspace" không có khóa số nên ô trống.
+    { id: 'rawId', header: 'rawId', className: 'w-20', cell: (r) => <RawId value={r.workspace?.rawId} /> },
     {
       id: 'workspace',
       header: 'Workspace',

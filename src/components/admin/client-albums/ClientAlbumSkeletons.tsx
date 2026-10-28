@@ -21,6 +21,7 @@ export const MONTH_COLUMNS = [
 
 /** Cột lấy đúng từ `MonthWorkspacesPanel`, bảng workspace đã tạo album trong một tháng. */
 export const MONTH_WORKSPACE_COLUMNS = [
+  { header: 'rawId', className: 'w-20' },
   { header: 'Workspace', className: 'min-w-[14vw]' },
   { header: 'Gói' },
   { header: 'Album tạo', className: 'text-right' },
@@ -29,6 +30,7 @@ export const MONTH_WORKSPACE_COLUMNS = [
 
 /** Cột lấy đúng từ `StorageTable`, bảng dung lượng theo workspace. */
 export const STORAGE_COLUMNS = [
+  { header: 'rawId', className: 'w-20' },
   { header: 'Workspace', className: 'min-w-[14vw]' },
   { header: 'Gói' },
   { header: 'Album', className: 'text-right' },

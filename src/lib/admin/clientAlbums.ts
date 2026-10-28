@@ -134,7 +134,7 @@ export const PERSONAL_ALBUM_LABEL = 'Không thuộc workspace';
 export const PERSONAL_ALBUM_HINT =
   'Album tạo thẳng trên Framevis, hoặc album NAS nhập qua ERP và chưa được gắn vào workspace nào.';
 
-/** Tên dòng `missing`; ngay dưới nó in `RawId` vì chỉ có id số là còn nghĩa. */
+/** Tên dòng `missing`; chỉ còn id số ở cột `rawId` đứng trước nó là có nghĩa. */
 export const MISSING_WORKSPACE_LABEL = 'Workspace không còn tồn tại';
 
 /** Chú thích dưới mọi con số GB: nói rõ nó là mức trần của một lần tải, không phải băng thông đã đo. */
