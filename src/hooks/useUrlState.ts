@@ -49,10 +49,13 @@ const RETURN_KEY = 'from';
 /**
  * Link vào trang chi tiết, mang theo nguyên query của danh sách (`/workspaces/wk…?from=page%3D10`).
  * Gói trong một key duy nhất nên không đụng vào các param của chính trang chi tiết (`tab`, `page`).
+ * `href` có thể đã mang query riêng của trang đích (`/workspaces/wk…?tab=albums&alFrom=…`): khi đó
+ * `from` được nối bằng `&` chứ không mở thêm một `?` thứ hai.
  */
 export function detailHref(href: string, listQuery: URLSearchParams | string): string {
   const qs = typeof listQuery === 'string' ? listQuery : listQuery.toString();
-  return qs ? `${href}?${RETURN_KEY}=${encodeURIComponent(qs)}` : href;
+  if (!qs) return href;
+  return `${href}${href.includes('?') ? '&' : '?'}${RETURN_KEY}=${encodeURIComponent(qs)}`;
 }
 
 /**

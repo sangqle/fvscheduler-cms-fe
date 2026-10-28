@@ -11,14 +11,17 @@ import { ErrorState, NotFoundState, isNotFound } from '@/components/admin/shared
 import { WorkspaceDetailSkeleton } from '@/components/admin/workspaces/WorkspaceSkeletons';
 import { OverviewTab } from '@/components/admin/workspaces/OverviewTab';
 import { BookingTab } from '@/components/admin/workspaces/BookingTab';
+import { AlbumsTab } from '@/components/admin/workspaces/AlbumsTab';
 import { MembersTab } from '@/components/admin/workspaces/MembersTab';
 import { HistoryTab } from '@/components/admin/workspaces/HistoryTab';
 import { useAdminWorkspace } from '@/hooks/useAdminWorkspaces';
 import { useReturnHref, useUrlState } from '@/hooks/useUrlState';
+import { WORKSPACE_ALBUM_TAB } from '@/lib/admin/clientAlbums';
 import { SUBSCRIPTION_STATUS, WORKSPACE_TYPE } from '@/lib/admin/labels';
 import { formatDateTime, shortId } from '@/lib/utils';
 
-const TABS = ['overview', 'booking', 'members', 'history'] as const;
+// Giá trị tab Album khách lấy từ `WORKSPACE_ALBUM_TAB` vì màn `/client-albums` cũng link vào nó.
+const TABS = ['overview', 'booking', WORKSPACE_ALBUM_TAB, 'members', 'history'] as const;
 type Tab = (typeof TABS)[number];
 
 /** CMS-02..04: chi tiết workspace, tab sống trên `?tab=`. */
@@ -100,6 +103,9 @@ export function WorkspaceDetailScreen({ workspaceId }: { workspaceId: string }) 
             Booking
             <TabsCount>{ws.stats.bookings}</TabsCount>
           </TabsTrigger>
+          {/* Không kèm số đếm như Booking: số album do framevis-drive tính, mà dải tab nằm ngoài các tab
+              nên không được đợi nó. */}
+          <TabsTrigger value={WORKSPACE_ALBUM_TAB}>Album khách</TabsTrigger>
           <TabsTrigger value="members">Thành viên</TabsTrigger>
           <TabsTrigger value="history">Lịch sử gói</TabsTrigger>
         </TabsList>
@@ -108,6 +114,9 @@ export function WorkspaceDetailScreen({ workspaceId }: { workspaceId: string }) 
         </TabsContent>
         <TabsContent value="booking" className="mt-4">
           {tab === 'booking' && <BookingTab workspaceId={ws.id} />}
+        </TabsContent>
+        <TabsContent value={WORKSPACE_ALBUM_TAB} className="mt-4">
+          {tab === WORKSPACE_ALBUM_TAB && <AlbumsTab workspaceId={ws.id} />}
         </TabsContent>
         <TabsContent value="members" className="mt-4">
           {tab === 'members' && <MembersTab workspaceId={ws.id} />}

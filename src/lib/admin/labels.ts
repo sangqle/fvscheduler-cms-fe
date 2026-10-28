@@ -4,6 +4,7 @@ import type {
   AffiliateCommissionStatus,
   AffiliatePayoutStatus,
   BillingPeriod,
+  ClientAlbumProvider,
   CouponRedemptionStatus,
   CouponState,
   CouponStatusFilter,
@@ -372,4 +373,21 @@ export const COUPON_STATUS_OPTIONS: { value: CouponStatusFilter | ''; label: str
 /** Kỳ thanh toán của một mã giảm giá: null là cả hai kỳ. */
 export function couponPeriodLabel(period: BillingPeriod | null): string {
   return period ? BILLING_PERIOD[period] : 'Cả hai';
+}
+
+// ─── Album khách (client albums) ──────────────────────────────────────────────
+
+/**
+ * Nơi giữ ảnh gốc của album. Chip gọi bằng tên người vận hành quen (Drive, NAS) chứ không in mã enum.
+ * Trạng thái album (`status`) thì khác: do spring-a7c giữ và không thuộc về ERP, nên in nguyên chữ hoa
+ * mono, không có bảng nhãn ở đây.
+ */
+export const CLIENT_ALBUM_PROVIDER: Record<ClientAlbumProvider, EnumMeta> = {
+  GOOGLE_DRIVE: { label: 'Drive', variant: 'info' },
+  SYNOLOGY_NAS: { label: 'NAS', variant: 'secondary' },
+};
+
+/** Nhà cung cấp lạ (spring-a7c thêm loại mới) thì in nguyên văn thay vì làm vỡ bảng. */
+export function clientAlbumProviderMeta(provider: string): EnumMeta {
+  return CLIENT_ALBUM_PROVIDER[provider as ClientAlbumProvider] ?? { label: provider, variant: 'outline' };
 }
