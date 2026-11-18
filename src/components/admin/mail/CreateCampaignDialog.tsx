@@ -61,6 +61,7 @@ import {
   groupSkipped,
   parseEmailList,
   parseIdList,
+  revealHidden,
   validationProblems,
 } from '@/lib/admin/mail';
 import { cn, shortId } from '@/lib/utils';
@@ -95,7 +96,7 @@ const MODE_HINT: Record<Mode, string> = {
 };
 
 const WORKSPACE_ONLY_TIP =
-  'Template này cần thông tin của một workspace, như tên workspace hay tên chủ workspace. Người chưa là thành viên Framevis không có workspace nào để lấy các giá trị đó, nên không gửi theo danh sách email được. Gửi theo tài khoản bị chặn vì cùng lý do.';
+  'Template này cần thông tin của một workspace, như tên workspace hay tên chủ workspace. Người chưa là thành viên Framevis không có workspace nào để lấy các giá trị đó, nên không gửi theo danh sách email được. Gửi theo tài khoản cũng bị chặn: mail theo tài khoản không gắn với một workspace cụ thể nào.';
 
 const NO_UNSUBSCRIBE_TIP =
   'Mail gửi theo danh sách email không kèm link hủy đăng ký. Template nên có câu “trả lời mail này để ngừng nhận”, ai trả lời thì bỏ địa chỉ đó khỏi lần gửi sau.';
@@ -103,9 +104,18 @@ const NO_UNSUBSCRIBE_TIP =
 /** Dòng sai hiện tối đa từng này ký tự, như backend cắt ở 80 khi nhắc lại một mục sai. */
 const SHOWN_ENTRY_MAX = 80;
 
+/** Ký tự ẩn in thành `[U+…]`, nếu không một dòng chỉ chứa ký tự ẩn hiện ra như dòng trống. */
 function shownEntry(value: string): string {
-  return value.length > SHOWN_ENTRY_MAX ? `${value.slice(0, SHOWN_ENTRY_MAX)}…` : value;
+  const shown = revealHidden(value);
+  return shown.length > SHOWN_ENTRY_MAX ? `${shown.slice(0, SHOWN_ENTRY_MAX)}…` : shown;
 }
+
+/** Câu xác nhận trước nút gửi nói rõ ai nhận: mail đã gửi không rút lại được. */
+const RECIPIENT_PHRASE: Record<Mode, string> = {
+  workspace: 'tới chủ workspace',
+  account: 'tới tài khoản',
+  email: 'tới danh sách email',
+};
 
 /**
  * Workspace nhận thêm id dạng SỐ THÔ, để admin dán thẳng kết quả một truy vấn SQL mà không phải mã
@@ -802,7 +812,7 @@ export function CreateCampaignDialog({
               {ready && (
                 <Alert variant="warning">
                   <AlertDescription>
-                    Xếp hàng gửi {ready.queued} mail bằng template {templateName}
+                    Xếp hàng gửi {ready.queued} mail {RECIPIENT_PHRASE[mode]} bằng template {templateName}
                     {version ? ` v${version}` : ''}. Mail đã gửi không thể rút lại; bạn chỉ có thể hủy phần
                     chưa gửi.
                     {!isEmail && ready.trialsGranted > 0

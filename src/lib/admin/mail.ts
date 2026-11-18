@@ -158,9 +158,22 @@ const PLAIN_EMAIL =
  */
 const EMAIL_EDGE = /^[\p{Z}\p{Cf}\s]+|[\p{Z}\p{Cf}\s]+$/gu;
 
-/** Ký tự không in ra được kẹt giữa địa chỉ: nhìn vẫn như hợp lệ nhưng server từ chối. */
+/**
+ * Ký tự không in ra được còn sót trong một mục: ký tự định dạng kẹt ở giữa, hoặc ký tự điều khiển ở
+ * bất cứ đâu (cả `EMAIL_EDGE` lẫn `EDGE` của backend đều không bóc chúng ở hai đầu). Mục trông như
+ * hợp lệ, hoặc như một dòng trống, nhưng server từ chối.
+ */
 const HIDDEN_CHARACTER = /[\p{Cf}\p{Cc}]/u;
+const HIDDEN_CHARACTERS = /[\p{Cf}\p{Cc}]/gu;
 const NON_ASCII = /[\u0080-￿]/;
+
+/** In ký tự ẩn thành `[U+0085]` để dòng báo lỗi có chữ cho người vận hành nhìn và xóa. */
+export function revealHidden(value: string): string {
+  return value.replace(
+    HIDDEN_CHARACTERS,
+    (ch) => `[U+${(ch.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}]`,
+  );
+}
 
 /** Vì sao client thấy một mục là sai. Chỉ để báo sớm, backend mới là bên quyết định. */
 export type EmailProblem = 'TOO_LONG' | 'HIDDEN_CHARACTER' | 'NOT_ASCII' | 'MALFORMED';
@@ -168,7 +181,7 @@ export type EmailProblem = 'TOO_LONG' | 'HIDDEN_CHARACTER' | 'NOT_ASCII' | 'MALF
 /** Lý do in cạnh dòng sai. `MALFORMED` không cần chữ: nhìn mục đó là thấy. */
 export const EMAIL_PROBLEM: Record<Exclude<EmailProblem, 'MALFORMED'>, string> = {
   TOO_LONG: `dài quá ${EMAIL_MAX_LENGTH} ký tự`,
-  HIDDEN_CHARACTER: 'có ký tự ẩn ở giữa, gõ lại địa chỉ này',
+  HIDDEN_CHARACTER: 'có ký tự ẩn, xóa ký tự đó hoặc gõ lại cả dòng',
   NOT_ASCII: 'có chữ có dấu hoặc ký tự ngoài bảng chữ ASCII',
 };
 

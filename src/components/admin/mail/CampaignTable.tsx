@@ -139,7 +139,7 @@ export function CampaignTable({
             <EmptyState
               icon={<Megaphone />}
               title="Chưa có chiến dịch nào"
-              description="Tạo chiến dịch từ một template đang bật, người nhận chọn theo workspace hoặc theo tài khoản."
+              description="Tạo chiến dịch từ một template đang bật, người nhận chọn theo workspace, theo tài khoản hoặc theo danh sách email."
               action={<Button onClick={onCreate}>Tạo chiến dịch</Button>}
             />
           )

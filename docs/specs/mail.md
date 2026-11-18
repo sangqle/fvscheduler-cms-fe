@@ -186,12 +186,14 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
   trả lời được là "id nào".
 - **Chiến dịch theo danh sách email** (backend §3.10a): endpoint riêng chứ không phải kiểu nhắm thứ
   ba của `/campaigns`, nên body không bao giờ có `workspaceIds`, `rawWorkspaceIds` hay `accountIds`.
-  Client chỉ bỏ mục rỗng, kể cả mục chỉ còn ký tự ẩn (server coi nó là mục sai), và **không** bỏ
+  Client chỉ bỏ mục rỗng sau khi bóc khoảng trắng và ký tự định dạng ở hai đầu (server coi mục như
+  thế là sai); ký tự điều khiển không bị bóc ở bên nào nên mục chứa nó bị báo sai, in dạng
+  `[U+0085]` cho thấy được. Client **không** bỏ
   trùng: mục trùng vẫn gửi lên để server bỏ và đếm vào `skippedDuplicate`. `parseEmailList` chép
   đúng `EDGE` + `EMAIL` của `MailCampaignService` để báo sớm, nhưng backend mới quyết định: chỉ một
   mục sai là 400 cho cả request và không gửi ai, message (`emails contains N invalid address(es):
   #2 "..."`, vị trí đếm trên mảng gửi lên chứ không phải số dòng) hiện nguyên văn. Tối đa 5000 mục
-  tính cả trùng. Template `WORKSPACE` là 400 (UI đã ẩn kiểu này); template tặng dùng thử cũng 400
+  tính cả trùng. Template `WORKSPACE` là 400 (UI khóa kiểu này, xem `CreateCampaignDialog`); template tặng dùng thử cũng 400
   nhưng FE không biết trước đó là template nào nên chỉ hiện message. Response dùng lại
   `CreateCampaignResult` với `skipped` luôn `[]`, `skippedNoEmail` và `trialsGranted` luôn 0; dòng
   mail có `workspaceId` và `accountId` null (`MessageTable` để ô workspace trống, không có cột tài
