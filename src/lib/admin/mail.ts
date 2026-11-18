@@ -134,6 +134,95 @@ export function parseIdList(raw: string): string[] {
   return [...seen];
 }
 
+/**
+ * Số mục tối đa của một danh sách người nhận mỗi lần gọi (`CreateCampaignRequest.MAX_TARGETS`).
+ * Danh sách email bị đếm trên đúng mảng gửi lên, tức là tính cả mục trùng.
+ */
+export const CAMPAIGN_TARGETS_MAX = 5000;
+
+/** RFC 5321, cũng là cỡ cột `mail_message.to_email`. */
+const EMAIL_MAX_LENGTH = 254;
+
+/**
+ * Bản sao của `MailCampaignService.EMAIL` phía backend, kiểm trên địa chỉ đã hạ chữ thường: phần
+ * trước `@` là atext và dấu chấm, tên miền có ít nhất hai nhãn gồm chữ, số và gạch nối ở giữa. Nhờ
+ * vậy `a@x.com;`, `<a@x.com>`, `a@x..com`, `a@x.com.` bị báo ở đây y như server sẽ từ chối.
+ */
+const PLAIN_EMAIL =
+  /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
+
+/**
+ * Khoảng trắng theo nghĩa Unicode và ký tự định dạng ở hai đầu một mục (NBSP, BOM đầu file CSV,
+ * zero-width space do trang web để lại): đúng tập `EDGE` backend bóc trước khi kiểm. `trim()` không
+ * bóc zero-width space, nên một dòng trông trống mà còn sót nó sẽ thành 400 cho cả danh sách.
+ */
+const EMAIL_EDGE = /^[\p{Z}\p{Cf}\s]+|[\p{Z}\p{Cf}\s]+$/gu;
+
+/** Ký tự không in ra được kẹt giữa địa chỉ: nhìn vẫn như hợp lệ nhưng server từ chối. */
+const HIDDEN_CHARACTER = /[\p{Cf}\p{Cc}]/u;
+const NON_ASCII = /[\u0080-￿]/;
+
+/** Vì sao client thấy một mục là sai. Chỉ để báo sớm, backend mới là bên quyết định. */
+export type EmailProblem = 'TOO_LONG' | 'HIDDEN_CHARACTER' | 'NOT_ASCII' | 'MALFORMED';
+
+/** Lý do in cạnh dòng sai. `MALFORMED` không cần chữ: nhìn mục đó là thấy. */
+export const EMAIL_PROBLEM: Record<Exclude<EmailProblem, 'MALFORMED'>, string> = {
+  TOO_LONG: `dài quá ${EMAIL_MAX_LENGTH} ký tự`,
+  HIDDEN_CHARACTER: 'có ký tự ẩn ở giữa, gõ lại địa chỉ này',
+  NOT_ASCII: 'có chữ có dấu hoặc ký tự ngoài bảng chữ ASCII',
+};
+
+export interface InvalidEmail {
+  /** Dòng trong ô dán, đếm từ 1. */
+  line: number;
+  value: string;
+  problem: EmailProblem;
+}
+
+export interface EmailList {
+  /** Mọi mục không rỗng, đã bóc hai đầu, giữ thứ tự và giữ cả mục trùng: đúng mảng gửi lên. */
+  emails: string[];
+  /** Số địa chỉ hợp lệ khác nhau (không phân biệt hoa thường), khớp số "sẽ gửi" khi chạy thử. */
+  unique: number;
+  /** Số mục lặp lại một địa chỉ hợp lệ đã có, khớp số "bỏ qua vì trùng" khi chạy thử. */
+  duplicates: number;
+  invalid: InvalidEmail[];
+}
+
+function emailProblem(value: string): EmailProblem | undefined {
+  const email = value.toLowerCase();
+  if (email.length > EMAIL_MAX_LENGTH) return 'TOO_LONG';
+  if (PLAIN_EMAIL.test(email)) return undefined;
+  if (HIDDEN_CHARACTER.test(email)) return 'HIDDEN_CHARACTER';
+  if (NON_ASCII.test(email)) return 'NOT_ASCII';
+  return 'MALFORMED';
+}
+
+/**
+ * Danh sách email dán từ bảng tính: tách theo xuống dòng, dấu phẩy, chấm phẩy hoặc khoảng trắng,
+ * bóc ký tự ẩn ở hai đầu mỗi mục rồi bỏ mục rỗng. **Không** bỏ trùng ở đây: mục trùng vẫn gửi lên
+ * để server tự bỏ và đếm vào `skippedDuplicate`, nên số trên ô dán và số chạy thử là một.
+ */
+export function parseEmailList(raw: string): EmailList {
+  const emails: string[] = [];
+  const invalid: InvalidEmail[] = [];
+  const seen = new Set<string>();
+  let duplicates = 0;
+  raw.split('\n').forEach((text, index) => {
+    for (const part of text.split(/[\s,;]+/)) {
+      const value = part.replace(EMAIL_EDGE, '');
+      if (!value) continue;
+      emails.push(value);
+      const problem = emailProblem(value);
+      const key = value.toLowerCase();
+      if (problem) invalid.push({ line: index + 1, value, problem });
+      else if (seen.has(key)) duplicates += 1;
+      else seen.add(key);
+    }
+  });
+  return { emails, unique: seen.size, duplicates, invalid };
+}
+
 /** Nhóm biến template dùng được: `COMMON` luôn có, cộng các nhóm đã khai. */
 export function declaredGroups(requiredContext: MailContextGroup[]): Set<MailContextGroup> {
   return new Set<MailContextGroup>(['COMMON', ...requiredContext]);

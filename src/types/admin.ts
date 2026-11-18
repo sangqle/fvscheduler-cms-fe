@@ -616,6 +616,27 @@ export interface CreateCampaignInput {
   dryRun: boolean;
 }
 
+/**
+ * POST /api/admin/mail/campaigns/by-email: chiến dịch gửi thẳng tới một danh sách địa chỉ, cho người
+ * chưa là thành viên Framevis, nên không có id workspace hay tài khoản nào trong body. Response là
+ * `CreateCampaignResult` với `skipped` luôn rỗng, `skippedNoEmail` và `trialsGranted` luôn 0; địa
+ * chỉ trùng đếm ở `skippedDuplicate`. Template cần ngữ cảnh WORKSPACE, hoặc template tặng dùng thử,
+ * là 400.
+ */
+export interface CreateEmailCampaignInput {
+  templateCode: string;
+  name: string;
+  /**
+   * 1 đến 5000 mục, tính cả mục trùng. Server bóc khoảng trắng và ký tự ẩn ở hai đầu, hạ chữ thường
+   * rồi bỏ trùng; chỉ MỘT mục sai (rỗng, quá 254 ký tự, không phải địa chỉ ASCII thường) là 400 cho
+   * cả request và không gửi ai. Bỏ dòng trống ở client trước khi gửi.
+   */
+  emails: string[];
+  variables?: Record<string, string>;
+  /** true = chỉ đếm người nhận, không chèn dòng nào. */
+  dryRun: boolean;
+}
+
 /** Vì sao một id đã nhắm tới lại không nhận được mail. */
 export type SkipReason =
   | 'WORKSPACE_NOT_FOUND'

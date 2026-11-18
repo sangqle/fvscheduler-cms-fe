@@ -12,6 +12,12 @@ export interface SegmentedOption {
   label: React.ReactNode;
   /** Hiện badge số bên phải nhãn (vd bộ lọc lịch hẹn). */
   count?: number;
+  /**
+   * Khóa riêng lựa chọn này nhưng vẫn để nó hiện ra, cho người dùng biết lựa chọn đó tồn tại. Lý do
+   * khóa phải nằm ở chữ luôn hiện cạnh thanh (vd chú thích của `Field`), không chỉ trong tooltip:
+   * nút `disabled` không nhận focus nên bàn phím và cảm ứng không bao giờ mở được tooltip của nó.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -80,13 +86,15 @@ export function SegmentedControl({
     >
       {options.map((opt) => {
         const active = opt.value === value;
+        // Cả thanh đã mờ thì một lựa chọn bị khóa không mờ thêm lần nữa (0.5 × 0.5 là gần như biến mất).
+        const optionLocked = Boolean(opt.disabled) && !disabled;
         return (
           <button
             key={opt.value}
             type="button"
             role="radio"
             aria-checked={active}
-            disabled={disabled}
+            disabled={disabled || opt.disabled}
             onClick={() => onValueChange(opt.value)}
             className={cn(
               'inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed',
@@ -94,7 +102,9 @@ export function SegmentedControl({
               fullWidth ? 'flex-1 justify-center' : 'shrink-0',
               active
                 ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+                : optionLocked
+                  ? 'text-muted-foreground opacity-50'
+                  : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {opt.label}

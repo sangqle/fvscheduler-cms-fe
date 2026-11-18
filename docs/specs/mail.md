@@ -1,17 +1,18 @@
 # Mail: template + chiến dịch gửi
 
-Updated: 2026-09-20 · Thiết kế: CMS-10..14 · Backend: `../fvscheduler/docs/features/mail-module.md`
+Updated: 2026-11-18 · Thiết kế: CMS-10..14 · Backend: `../fvscheduler/docs/features/mail-module.md`
 
 ## Mục đích
 
 Soạn và phát hành mail template lưu ở DB (mỗi lần lưu là một version bất biến), xem trước bản nháp
-đang gõ và bản đã lưu, gửi thử một địa chỉ, rồi tạo chiến dịch gửi hàng loạt tới chủ workspace hoặc
-tài khoản và theo dõi tiến độ, nhật ký gửi (outbox).
+đang gõ và bản đã lưu, gửi thử một địa chỉ, rồi tạo chiến dịch gửi hàng loạt tới chủ workspace, tài
+khoản, hoặc một danh sách email của người chưa là thành viên, và theo dõi tiến độ, nhật ký gửi (outbox).
 
 **Không có**: trang tạo template riêng (tạo bằng dialog), server render nội dung chưa lưu, tìm kiếm
 tài khoản (chỉ có id dán tay hoặc suy từ workspace), xóa template (chỉ tắt `active`), rollback
 version (restore = PUT lại nội dung cũ thành version mới), id/chi tiết/gửi lại từng message, hẹn
-giờ gửi, trigger tự động (phase 2, nhóm ngữ cảnh `SUBSCRIPTION`).
+giờ gửi, trigger tự động (phase 2, nhóm ngữ cảnh `SUBSCRIPTION`), link hủy đăng ký cho người nhận
+theo danh sách email.
 
 ## Màn hình
 
@@ -39,6 +40,24 @@ cho nhật ký, nên chuyển tab không làm mất bộ lọc của tab kia.
   `hideCampaignColumn?`); bảng chỉ giữ trang và cỡ trang. Lọc `email` là **khớp chính xác** cả địa
   chỉ, không phải tìm chuỗi con; `campaignCode` sai trả `404` nên hiện "Không có chiến dịch này"
   chứ không phải bảng rỗng.
+
+### `CreateCampaignDialog`
+Ba bước (template, người nhận, biến + chạy thử); nút gửi chỉ mở khi lần chạy thử khớp đúng dữ liệu
+đang nhập (ký hiệu gồm template, tên, kiểu người nhận, danh sách, giá trị biến). Bước 2 chọn
+`Theo workspace` · `Theo tài khoản` · `Theo danh sách email`, mỗi kiểu giữ ô dán riêng.
+
+- **Theo danh sách email** (người chưa là thành viên) gọi `useCreateEmailCampaign`. Ô dán đi qua
+  `parseEmailList`: badge "N địa chỉ, M trùng" bằng đúng số "Sẽ gửi" và "Bỏ qua vì trùng" của lần
+  chạy thử; mục sai liệt kê kèm số dòng (8 mục đầu, kèm lý do khi không tự thấy được như ký tự ẩn,
+  chữ có dấu, quá 254 ký tự) và khóa nút Tiếp tục; quá 5000 mục cũng khóa. InfoTip cạnh nhãn nhắc
+  mail này không có link hủy đăng ký.
+- Template khai `WORKSPACE`: hai kiểu còn lại vẫn hiện nhưng bị khóa (`SegmentedOption.disabled`),
+  câu chú thích bảo quay lại bước 1 chọn template không cần WORKSPACE, InfoTip giải thích người chưa
+  là thành viên không có workspace nào để điền biến. Khóa chứ không ẩn: ẩn đi thì người vận hành
+  tưởng không có kiểu đó.
+- Kết quả của danh sách email chỉ có hai thẻ "Sẽ gửi" và "Bỏ qua vì trùng"; ẩn thẻ "không có
+  email", `SkippedBreakdown` và mọi dòng dùng thử (luôn 0 hoặc rỗng). Toast sau khi gửi kèm số địa
+  chỉ trùng đã bỏ.
 
 ### `/mail/templates/[code]`
 `TemplateEditorScreen` (prop `code`) · màn duy nhất chạy **trọn bề ngang**: `isFullWidthRoute` trong
@@ -133,6 +152,7 @@ dùng chung component ở `*Skeletons.tsx`, xem [README](./README.md)) · empty 
 | `useMailCampaigns(page, size)` | `GET /api/admin/mail/campaigns` | `campaigns(page, size)` | — |
 | `useMailCampaign(campaignCode)` | `GET .../campaigns/{campaignCode}` | `campaign(campaignCode)` (refetch 5s khi `isCampaignLive`) | — |
 | `useCreateMailCampaign()` | `POST /api/admin/mail/campaigns` | — | `campaigns` + `messages` (bỏ qua khi `dryRun`) |
+| `useCreateEmailCampaign()` | `POST /api/admin/mail/campaigns/by-email` | mutation | `campaigns` + `messages` (bỏ qua khi `dryRun`) |
 | `useCampaignAction(campaignCode)` | `POST .../{campaignCode}/cancel` \| `/retry-failed` | — | campaign detail + `campaigns` + `messages` |
 | `useMailMessages(params)` | `GET /api/admin/mail/messages` | `messages(params)` | — |
 
@@ -152,7 +172,7 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
   backend **im lặng**: thấy `rawWorkspaceIds` khác rỗng là nó dùng danh sách đó và bỏ hẳn
   `workspaceIds`, nên nửa còn lại biến mất không dấu vết. Id số chỉ mở cho workspace, tài khoản
   không có đường này. Template khai `requiredContext` chứa
-  `WORKSPACE` thì khóa lựa chọn theo tài khoản trên UI. **Biến không còn chặn gửi** (backend đổi
+  `WORKSPACE` thì khóa lựa chọn theo tài khoản và theo danh sách email trên UI. **Biến không còn chặn gửi** (backend đổi
   2026-09-20): khóa version khai mà bỏ trống thì lưu rỗng, render ra chỗ trống và vẫn gửi, trả về
   trong `blankVariables`; khóa version không khai thì backend bỏ hẳn, trả về trong `ignoredVariables`
   và **không bao giờ** đè được biến server tự tính như `workspaceName`. UI vì thế chỉ cảnh báo chứ
@@ -164,6 +184,19 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
   `DUPLICATE_OWNER` kèm `mergedIntoWorkspaceId`, `ACCOUNT_NOT_FOUND`); `SkippedBreakdown` trong
   dialog dựng khối này, vì bộ đếm chỉ nói "bao nhiêu" còn sau khi mail bay đi thì câu hỏi duy nhất
   trả lời được là "id nào".
+- **Chiến dịch theo danh sách email** (backend §3.10a): endpoint riêng chứ không phải kiểu nhắm thứ
+  ba của `/campaigns`, nên body không bao giờ có `workspaceIds`, `rawWorkspaceIds` hay `accountIds`.
+  Client chỉ bỏ mục rỗng, kể cả mục chỉ còn ký tự ẩn (server coi nó là mục sai), và **không** bỏ
+  trùng: mục trùng vẫn gửi lên để server bỏ và đếm vào `skippedDuplicate`. `parseEmailList` chép
+  đúng `EDGE` + `EMAIL` của `MailCampaignService` để báo sớm, nhưng backend mới quyết định: chỉ một
+  mục sai là 400 cho cả request và không gửi ai, message (`emails contains N invalid address(es):
+  #2 "..."`, vị trí đếm trên mảng gửi lên chứ không phải số dòng) hiện nguyên văn. Tối đa 5000 mục
+  tính cả trùng. Template `WORKSPACE` là 400 (UI đã ẩn kiểu này); template tặng dùng thử cũng 400
+  nhưng FE không biết trước đó là template nào nên chỉ hiện message. Response dùng lại
+  `CreateCampaignResult` với `skipped` luôn `[]`, `skippedNoEmail` và `trialsGranted` luôn 0; dòng
+  mail có `workspaceId` và `accountId` null (`MessageTable` để ô workspace trống, không có cột tài
+  khoản). Không có link hủy đăng ký: template tự ghi câu "trả lời mail này để ngừng nhận", owner
+  bỏ những địa chỉ đó khỏi lần gửi sau.
 - **Kích hoạt dùng thử theo template**: đúng MỘT template (backend cấu hình
   `subscription.trial.campaign-template-code`, mặc định `trial-start`) vừa gửi mail vừa cấp gói
   dùng thử cho những workspace chưa có gói nào. Không có cờ nào trên request bật tắt chuyện này,
@@ -177,7 +210,7 @@ Rút gọn từ "Client-side contract 1 / 2" trong `mail-fe-integration.md`:
 `src/types/admin.ts`: `AdminMailTemplateRow`, `AdminMailTemplate`, `AdminMailTemplateVersion`,
 `MailTemplateInput`, `AdminMailVariable`, `AdminMailVariableGroup`, `MailContextInput`,
 `MailPreviewResult`, `MailTestSendInput`, `MailTestSendResult`, `AdminMailCampaignRow`,
-`AdminMailCampaignDetail`, `CreateCampaignInput`, `CreateCampaignResult`, `SkippedTarget`,
+`AdminMailCampaignDetail`, `CreateCampaignInput`, `CreateEmailCampaignInput`, `CreateCampaignResult`, `SkippedTarget`,
 `SkipReason`, `CampaignActionResult`,
 `AdminMailMessageRow`, `AdminMailTemplateListParams`, `AdminMailMessageListParams`, `MailCategory`,
 `MailContextGroup`, `MailCampaignStatus`, `MailMessageStatus`.
@@ -191,12 +224,14 @@ Primitive được mở rộng để màn này khỏi style tại chỗ: `Card p
 primitive sống sót qua `tailwind-merge` và thắng ở cascade), `CardContent standalone` cho thẻ không
 có header, `Badge mono="plain"` (bản `mono` sẵn có kèm `uppercase` nên sẽ in ra "V3"), và
 `SegmentedControl` đổi `role="tablist"` thành `role="radiogroup"` vì mọi chỗ dùng nó trong repo đều
-là chọn-một chứ không phải tab (tab thật đi bằng primitive `Tabs`).
+là chọn-một chứ không phải tab (tab thật đi bằng primitive `Tabs`), cộng `SegmentedOption.disabled`
+để khóa riêng một lựa chọn mà vẫn cho nó hiện.
 
 Luật dùng chung: `src/lib/admin/mail.ts` (regex mã/biến, `validationProblems` + `explainProblem` +
 `problemLine`, `concurrentVersion` cho 409, `insertVariable`, `declaredGroups`,
 `renderDraft` + `unsupportedPebble` cho xem trước bản nháp, `FOOTER_INCLUDE`, `isCampaignLive`,
-`SKIP_REASON` + `groupSkipped` cho khối id bị bỏ). `validationProblems` nhận **cả 400 lẫn 422**:
+`SKIP_REASON` + `groupSkipped` cho khối id bị bỏ, `parseEmailList` + `EMAIL_PROBLEM` +
+`CAMPAIGN_TARGETS_MAX` cho ô dán danh sách email). `validationProblems` nhận **cả 400 lẫn 422**:
 backend đã chuyển status của `UnprocessableEntityException` sang 400 từ 2026-09-13, giữ 422 để bản
 cũ còn chạy. `isCampaignLive` là vị từ dùng chung cho nhịp polling của hook
 và chỉ báo "đang theo dõi" trên màn chi tiết: hợp đồng đóng cửa sổ theo `status`, nhưng một chiến

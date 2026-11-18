@@ -27,6 +27,7 @@ import {
   DialogIcon,
   DialogTitle,
 } from '@/components/ui/Dialog';
+import { InfoTip } from '@/components/ui/InfoTip';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -43,26 +44,68 @@ import {
   missingVariables,
 } from '@/components/admin/mail/MailContextFields';
 import { ContextChips, CustomVariableChips, VersionChip } from '@/components/admin/mail/mailDisplay';
-import { useCreateMailCampaign, useMailTemplate, useMailTemplates } from '@/hooks/useAdminMail';
+import {
+  useCreateEmailCampaign,
+  useCreateMailCampaign,
+  useMailTemplate,
+  useMailTemplates,
+} from '@/hooks/useAdminMail';
 import { apiErrorMessage } from '@/lib/api/auth';
 import { isSendableTemplate } from '@/lib/admin/labels';
 import {
   CAMPAIGN_NAME_MAX,
+  CAMPAIGN_TARGETS_MAX,
+  EMAIL_PROBLEM,
   SKIP_REASON,
   explainProblem,
   groupSkipped,
+  parseEmailList,
   parseIdList,
   validationProblems,
 } from '@/lib/admin/mail';
 import { cn, shortId } from '@/lib/utils';
-import type { CreateCampaignInput, CreateCampaignResult, SkippedTarget } from '@/types/admin';
+import type {
+  CreateCampaignInput,
+  CreateCampaignResult,
+  CreateEmailCampaignInput,
+  SkippedTarget,
+} from '@/types/admin';
 
-type Mode = 'workspace' | 'account';
+/** `email` là người chưa là thành viên: không có id nào, gọi endpoint riêng `/campaigns/by-email`. */
+type Mode = 'workspace' | 'account' | 'email';
+type IdMode = Exclude<Mode, 'email'>;
 type Step = 1 | 2 | 3;
 
 /** Id mờ luôn là 2 ký tự tag + 14 ký tự base32; tag cho biết id thuộc loại nào. */
-const ID_TAG: Record<Mode, string> = { workspace: 'wk', account: 'ac' };
+const ID_TAG: Record<IdMode, string> = { workspace: 'wk', account: 'ac' };
 const ID_LENGTH = 16;
+
+/** Nhãn ngắn để ba lựa chọn vừa một hàng trong dialog; phần giải thích nằm ở `MODE_HINT`. */
+const MODE_OPTIONS: { value: Mode; label: string }[] = [
+  { value: 'workspace', label: 'Theo workspace' },
+  { value: 'account', label: 'Theo tài khoản' },
+  { value: 'email', label: 'Theo danh sách email' },
+];
+
+const MODE_HINT: Record<Mode, string> = {
+  workspace:
+    'Mail gửi tới chủ của từng workspace. Workspace đã xóa mềm hoặc không còn chủ có email thì bị bỏ qua.',
+  account: 'Mail đi thẳng tới các tài khoản này. Tài khoản không có email bị bỏ qua.',
+  email: 'Dành cho người chưa là thành viên Framevis: mail đi thẳng tới từng địa chỉ trong danh sách.',
+};
+
+const WORKSPACE_ONLY_TIP =
+  'Template này cần thông tin của một workspace, như tên workspace hay tên chủ workspace. Người chưa là thành viên Framevis không có workspace nào để lấy các giá trị đó, nên không gửi theo danh sách email được. Gửi theo tài khoản bị chặn vì cùng lý do.';
+
+const NO_UNSUBSCRIBE_TIP =
+  'Mail gửi theo danh sách email không kèm link hủy đăng ký. Template nên có câu “trả lời mail này để ngừng nhận”, ai trả lời thì bỏ địa chỉ đó khỏi lần gửi sau.';
+
+/** Dòng sai hiện tối đa từng này ký tự, như backend cắt ở 80 khi nhắc lại một mục sai. */
+const SHOWN_ENTRY_MAX = 80;
+
+function shownEntry(value: string): string {
+  return value.length > SHOWN_ENTRY_MAX ? `${value.slice(0, SHOWN_ENTRY_MAX)}…` : value;
+}
 
 /**
  * Workspace nhận thêm id dạng SỐ THÔ, để admin dán thẳng kết quả một truy vấn SQL mà không phải mã
@@ -78,12 +121,13 @@ const STEPS = ['Chọn template', 'Chọn người nhận', 'Điền biến và 
 
 const STEP_HINT: Record<Step, string> = {
   1: 'Chỉ template đang bật và không phải PARTIAL mới tạo chiến dịch được',
-  2: 'Mail gửi tới chủ workspace, hoặc thẳng tới tài khoản, chọn một kiểu',
+  2: 'Gửi tới chủ workspace, tài khoản, hoặc một danh sách email, chọn một kiểu',
   3: 'Chạy thử đếm trước người nhận mà không chèn dòng nào',
 };
 
 /**
- * Tạo và xếp hàng chiến dịch (POST /campaigns). Đây là thao tác không rút lại được, nên chia ba
+ * Tạo và xếp hàng chiến dịch: `POST /campaigns` cho workspace và tài khoản, `POST /campaigns/by-email`
+ * cho danh sách email của người chưa là thành viên. Đây là thao tác không rút lại được, nên chia ba
  * bước và **bắt buộc** chạy thử (`dryRun`) khớp đúng dữ liệu đang nhập trước khi cho gửi thật.
  */
 export function CreateCampaignDialog({
@@ -106,9 +150,12 @@ export function CreateCampaignDialog({
   const { showToast } = useToast();
   // Dialog này mount sẵn ở ba nơi và phần lớn thời gian đang đóng, chỉ nạp danh sách khi mở.
   const templates = useMailTemplates({ active: true }, { enabled: open });
-  // Hai mutation riêng để nút "Chạy thử" và nút gửi thật có trạng thái pending độc lập.
+  // Mutation riêng cho nút "Chạy thử" và nút gửi thật để hai nút có trạng thái pending độc lập;
+  // danh sách email đi endpoint khác nên có cặp riêng.
   const dryRun = useCreateMailCampaign();
   const create = useCreateMailCampaign();
+  const dryRunEmail = useCreateEmailCampaign();
+  const createEmail = useCreateEmailCampaign();
 
   const [step, setStep] = React.useState<Step>(1);
   const [templateCode, setTemplateCode] = React.useState('');
@@ -117,7 +164,11 @@ export function CreateCampaignDialog({
   // Mỗi kiểu người nhận giữ ô dán riêng. Dùng chung một ô thì id tài khoản đã dán vẫn còn nguyên khi
   // template ép về workspace, rồi đi lên body dưới khóa `workspaceIds`: backend chỉ trả 400 trống
   // trơn ("Invalid id in request body"), không chỉ ra dòng nào sai.
-  const [rawIds, setRawIds] = React.useState<Record<Mode, string>>({ workspace: '', account: '' });
+  const [rawIds, setRawIds] = React.useState<Record<Mode, string>>({
+    workspace: '',
+    account: '',
+    email: '',
+  });
   const [variables, setVariables] = React.useState<Record<string, string>>({});
   const [estimate, setEstimate] = React.useState<{ signature: string; result: CreateCampaignResult } | null>(null);
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -131,10 +182,12 @@ export function CreateCampaignDialog({
   const needsWorkspace = requiredContext.includes('WORKSPACE');
   const templateName = detail.data?.name ?? row?.name ?? '';
   const version = detail.data?.currentVersion ?? row?.currentVersion;
-  // Template cần ngữ cảnh WORKSPACE thì gửi theo tài khoản chắc chắn 422: suy ra kiểu người nhận
-  // thay vì đồng bộ bằng effect, vì effect chạy sau render nên có đúng một nhịp mà lựa chọn cũ vẫn
-  // còn hiệu lực. Ô dán id của mỗi kiểu tách riêng nên id không bao giờ lẫn sang body sai khóa.
+  // Template cần ngữ cảnh WORKSPACE thì gửi theo tài khoản hay theo danh sách email đều bị từ chối:
+  // suy ra kiểu người nhận thay vì đồng bộ bằng effect, vì effect chạy sau render nên có đúng một
+  // nhịp mà lựa chọn cũ vẫn còn hiệu lực. Ô dán của mỗi kiểu tách riêng nên id không bao giờ lẫn
+  // sang body sai khóa.
   const mode: Mode = needsWorkspace ? 'workspace' : modeChoice;
+  const isEmail = mode === 'email';
 
   React.useEffect(() => {
     if (!open) return;
@@ -142,7 +195,7 @@ export function CreateCampaignDialog({
     setTemplateCode(initialTemplateCode ?? '');
     setName('');
     setModeChoice('workspace');
-    setRawIds({ workspace: (initialWorkspaceIds ?? []).join('\n'), account: '' });
+    setRawIds({ workspace: (initialWorkspaceIds ?? []).join('\n'), account: '', email: '' });
     setVariables({});
     setEstimate(null);
     setServerError(null);
@@ -162,19 +215,25 @@ export function CreateCampaignDialog({
     [templates.data],
   );
 
-  const ids = parseIdList(rawIds[mode]);
-  const numericIds = mode === 'workspace' ? ids.filter((id) => RAW_ID.test(id)) : [];
+  // Ô dán id chỉ được đọc khi gửi theo workspace hoặc tài khoản; ở chế độ email nó nằm yên chờ quay lại.
+  const idMode: IdMode | null = isEmail ? null : mode;
+  const ids = idMode ? parseIdList(rawIds[idMode]) : [];
+  const numericIds = idMode === 'workspace' ? ids.filter((id) => RAW_ID.test(id)) : [];
   const opaqueIds = ids.filter((id) => !numericIds.includes(id));
   // Chỉ soi tag và độ dài, không soi bảng chữ base32: đây là gợi ý cho người dán nhầm cột id, không
   // phải bản sao của bộ giải mã phía backend, chặt hơn backend là chặn nhầm id hợp lệ.
-  const malformed = opaqueIds.filter(
-    (id) => id.length !== ID_LENGTH || !id.toLowerCase().startsWith(ID_TAG[mode]),
-  );
+  const malformed = idMode
+    ? opaqueIds.filter((id) => id.length !== ID_LENGTH || !id.toLowerCase().startsWith(ID_TAG[idMode]))
+    : [];
   // Trộn hai dạng là ca nguy hiểm nhất: backend thấy `rawWorkspaceIds` khác rỗng là dùng nó và bỏ
   // hẳn `workspaceIds`, nên nửa id mờ biến mất không một lời báo. Chặn tại đây thay vì để người
   // dùng đọc con số người nhận rồi tự đoán vì sao thiếu.
   const mixedIdForms = numericIds.length > 0 && opaqueIds.length > 0;
   const useRawIds = numericIds.length > 0 && !mixedIdForms;
+  // Kiểm ở client chỉ để báo sớm, cùng luật với backend; 400 nếu có vẫn hiện nguyên message.
+  // Ghi nhớ theo ô dán vì gõ biến ở bước 3 không cần tách lại vài nghìn dòng.
+  const emailList = React.useMemo(() => parseEmailList(rawIds.email), [rawIds.email]);
+  const tooManyEmails = emailList.emails.length > CAMPAIGN_TARGETS_MAX;
   // Biến bỏ trống KHÔNG còn chặn gửi: backend lưu rỗng và render ra chỗ trống. Vẫn tính ra để cảnh
   // báo, vì "gửi đi một mail thiếu chữ" là thứ người vận hành muốn thấy trước, không phải sau.
   const blank = missingVariables(custom, variables);
@@ -188,7 +247,9 @@ export function CreateCampaignDialog({
 
   const done: Record<Step, boolean> = {
     1: Boolean(templateCode && name.trim() && detail.data && !notSendable),
-    2: ids.length > 0 && malformed.length === 0 && !mixedIdForms,
+    2: isEmail
+      ? emailList.emails.length > 0 && emailList.invalid.length === 0 && !tooManyEmails
+      : ids.length > 0 && malformed.length === 0 && !mixedIdForms,
     3: true,
   };
 
@@ -200,7 +261,7 @@ export function CreateCampaignDialog({
     templateCode,
     name.trim(),
     mode,
-    ids,
+    isEmail ? emailList.emails : ids,
     custom.map((v) => (variables[v] ?? '').trim()),
   ]);
   const ready = estimate?.signature === signature ? estimate.result : null;
@@ -213,6 +274,17 @@ export function CreateCampaignDialog({
       workspaceIds: mode === 'workspace' && !useRawIds ? ids : undefined,
       rawWorkspaceIds: useRawIds ? numericIds.map(Number) : undefined,
       accountIds: mode === 'account' ? ids : undefined,
+      variables: campaignVariables(custom, variables),
+      dryRun: dry,
+    };
+  }
+
+  /** Không có khóa id nào: endpoint này chỉ nhận địa chỉ. Gửi cả mục trùng để server tự đếm. */
+  function emailPayload(dry: boolean): CreateEmailCampaignInput {
+    return {
+      templateCode,
+      name: name.trim(),
+      emails: emailList.emails,
       variables: campaignVariables(custom, variables),
       dryRun: dry,
     };
@@ -239,22 +311,31 @@ export function CreateCampaignDialog({
     clearErrors();
     if (!done[1] || !done[2] || !done[3]) return;
     const forSignature = signature;
-    dryRun.mutate(payload(true), {
-      onSuccess: (result) => setEstimate({ signature: forSignature, result }),
+    const callbacks = {
+      onSuccess: (result: CreateCampaignResult) => setEstimate({ signature: forSignature, result }),
       onError: handleError,
-    });
+    };
+    if (isEmail) dryRunEmail.mutate(emailPayload(true), callbacks);
+    else dryRun.mutate(payload(true), callbacks);
   }
 
   function submit() {
     clearErrors();
     if (!ready) return;
-    create.mutate(payload(false), {
-      onSuccess: (result) => {
+    const callbacks = {
+      onSuccess: (result: CreateCampaignResult) => {
+        const pinned = `Chiến dịch chạy ${result.templateCode} v${result.templateVersion}, đã ghim version này.`;
+        // Danh sách email không bao giờ cấp dùng thử; thứ đáng báo ở đó là số địa chỉ trùng đã bỏ.
+        const extra = isEmail
+          ? result.skippedDuplicate > 0
+            ? ` Bỏ qua ${result.skippedDuplicate} địa chỉ trùng.`
+            : ''
+          : result.trialsGranted > 0
+            ? ` Đã cấp gói dùng thử cho ${result.trialsGranted} workspace.`
+            : '';
         showToast({
           title: `Đã xếp hàng ${result.queued} mail`,
-          description: result.trialsGranted > 0
-            ? `Chiến dịch chạy ${result.templateCode} v${result.templateVersion}, đã ghim version này. Đã cấp gói dùng thử cho ${result.trialsGranted} workspace.`
-            : `Chiến dịch chạy ${result.templateCode} v${result.templateVersion}, đã ghim version này.`,
+          description: pinned + extra,
           variant: 'success',
         });
         onOpenChange(false);
@@ -262,10 +343,14 @@ export function CreateCampaignDialog({
         if (result.campaignCode) router.push(`/mail/campaigns/${result.campaignCode}`);
       },
       onError: handleError,
-    });
+    };
+    if (isEmail) createEmail.mutate(emailPayload(false), callbacks);
+    else create.mutate(payload(false), callbacks);
   }
 
-  const busy = dryRun.isPending || create.isPending;
+  const dryRunning = dryRun.isPending || dryRunEmail.isPending;
+  const sending = create.isPending || createEmail.isPending;
+  const busy = dryRunning || sending;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
@@ -408,100 +493,164 @@ export function CreateCampaignDialog({
             <>
               <Field
                 label="Kiểu người nhận"
+                badge={
+                  needsWorkspace ? (
+                    <InfoTip label="Vì sao chỉ gửi theo workspace" content={WORKSPACE_ONLY_TIP} />
+                  ) : undefined
+                }
                 hint={
                   needsWorkspace
-                    ? 'Template này khai ngữ cảnh WORKSPACE nên chỉ gửi theo workspace được, lựa chọn theo tài khoản đã bị ẩn.'
-                    : mode === 'workspace'
-                      ? 'Mỗi workspace quy về chủ của nó. Workspace đã xóa mềm hoặc không còn chủ có email thì bị bỏ qua.'
-                      : 'Mail đi thẳng tới các tài khoản này. Tài khoản không có email bị bỏ qua.'
+                    ? 'Template này khai ngữ cảnh WORKSPACE nên chỉ gửi theo workspace được. Muốn gửi theo tài khoản hoặc danh sách email, quay lại bước 1 chọn template không cần WORKSPACE.'
+                    : MODE_HINT[mode]
                 }
               >
-                {/* Ẩn hẳn thay vì khoá: lý do khoá nằm trong tooltip thì bàn phím và cảm ứng không đọc được. */}
+                {/* Khóa chứ không ẩn: ẩn đi thì người vận hành tưởng không có hai kiểu kia. Nút bị khóa
+                    không nhận focus nên lý do phải nằm ở câu chú thích luôn hiện bên dưới, InfoTip chỉ
+                    thêm phần vì sao. */}
                 <SegmentedControl
                   size="sm"
                   aria-label="Kiểu người nhận"
                   value={mode}
                   onValueChange={(v) => setModeChoice(v as Mode)}
-                  options={
-                    needsWorkspace
-                      ? [{ value: 'workspace', label: 'Theo workspace (gửi tới chủ workspace)' }]
-                      : [
-                          { value: 'workspace', label: 'Theo workspace (gửi tới chủ workspace)' },
-                          { value: 'account', label: 'Theo tài khoản' },
-                        ]
-                  }
+                  options={MODE_OPTIONS.map((o) => ({
+                    ...o,
+                    disabled: needsWorkspace && o.value !== 'workspace',
+                  }))}
                 />
               </Field>
 
-              <Field
-                id="campaign-ids"
-                label="Danh sách id"
-                badge={
-                  <Badge variant={ids.length > 0 ? 'info' : 'muted'} size="sm">
-                    {ids.length} id
-                  </Badge>
-                }
-                hint={
-                  mode === 'workspace'
-                    ? `Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Nhận id mờ (bắt đầu bằng ${ID_TAG.workspace}, dài ${ID_LENGTH} ký tự) hoặc id số thô dán từ truy vấn SQL, nhưng cả danh sách phải cùng một dạng.`
-                    : `Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Id bắt đầu bằng ${ID_TAG.account} và dài ${ID_LENGTH} ký tự.`
-                }
-              >
-                <div className="flex flex-col gap-2">
-                  <Textarea
-                    id="campaign-ids"
-                    rows={5}
-                    value={rawIds[mode]}
-                    onChange={(e) => setRawIds((prev) => ({ ...prev, [mode]: e.target.value }))}
-                    placeholder={
-                      mode === 'workspace'
-                        ? 'wk8AA109MXP1XRBY\nwkNN0TC1ZMG8NMMP\n\nhoặc id số: 128\n129'
-                        : 'ac8AA109MXP1XRBY\nacNN0TC1ZMG8NMMP'
-                    }
-                    error={malformed.length > 0 || mixedIdForms}
-                    className="font-mono"
-                  />
-                  {mixedIdForms && (
-                    <Alert variant="warning">
-                      <AlertDescription>
-                        Danh sách đang trộn {numericIds.length} id số và {opaqueIds.length} id mờ.
-                        Backend chỉ nhận một dạng cho mỗi lần gửi: nếu có id số thì id mờ bị bỏ qua
-                        hoàn toàn. Giữ lại một dạng rồi chạy thử lại.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {useRawIds && (
-                    <Alert variant="info">
-                      <AlertDescription>
-                        Đang gửi theo {numericIds.length} id số thô. Id số không đọc được bằng mắt
-                        nên hãy chạy thử và đối chiếu số người nhận trước khi gửi thật.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {malformed.length > 0 && (
-                    <Alert variant="warning">
-                      <AlertDescription className="flex flex-col gap-1">
-                        <span>
-                          {malformed.length} id không đúng dạng, sửa hoặc bỏ khỏi danh sách rồi mới chạy
-                          thử được:
-                        </span>
-                        <ul className="flex flex-col gap-0.5">
-                          {malformed.slice(0, 8).map((id) => (
-                            <li key={id}>
-                              <code className="font-mono text-xs break-all">{id}</code>
-                            </li>
-                          ))}
-                        </ul>
-                        {malformed.length > 8 && <span>và {malformed.length - 8} id khác.</span>}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </Field>
+              {isEmail ? (
+                <Field
+                  id="campaign-emails"
+                  label="Danh sách email"
+                  badge={
+                    <>
+                      <Badge variant={emailList.unique > 0 ? 'info' : 'muted'} size="sm">
+                        {emailList.duplicates > 0
+                          ? `${emailList.unique} địa chỉ, ${emailList.duplicates} trùng`
+                          : `${emailList.unique} địa chỉ`}
+                      </Badge>
+                      <InfoTip label="Về việc ngừng nhận mail" content={NO_UNSUBSCRIBE_TIP} />
+                    </>
+                  }
+                  hint="Mỗi dòng một địa chỉ, tách bằng dấu phẩy, chấm phẩy hay khoảng trắng cũng được. Địa chỉ trùng nhau, kể cả khác chữ hoa thường, chỉ nhận một mail."
+                >
+                  <div className="flex flex-col gap-2">
+                    <Textarea
+                      id="campaign-emails"
+                      rows={6}
+                      mono
+                      spellCheck={false}
+                      value={rawIds.email}
+                      onChange={(e) => setRawIds((prev) => ({ ...prev, email: e.target.value }))}
+                      placeholder={'lan.studio@gmail.com\nminh.photo@gmail.com, an.wedding@yahoo.com'}
+                      error={emailList.invalid.length > 0 || tooManyEmails}
+                    />
+                    {tooManyEmails && (
+                      <Alert variant="warning">
+                        <AlertDescription>
+                          Danh sách đang có {emailList.emails.length} địa chỉ tính cả địa chỉ trùng, vượt mức{' '}
+                          {CAMPAIGN_TARGETS_MAX} mỗi lần gửi. Chia ra nhiều chiến dịch rồi chạy thử từng đợt.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {emailList.invalid.length > 0 && (
+                      <Alert variant="warning">
+                        <AlertDescription className="flex flex-col gap-1">
+                          <span>
+                            {emailList.invalid.length} mục không phải địa chỉ email hợp lệ, sửa hoặc bỏ
+                            đi rồi mới chạy thử được:
+                          </span>
+                          <ul className="flex flex-col gap-0.5">
+                            {emailList.invalid.slice(0, 8).map((entry, index) => (
+                              <li key={`${entry.line}:${index}`} className="break-all">
+                                Dòng {entry.line}:{' '}
+                                <code className="font-mono text-xs">{shownEntry(entry.value)}</code>
+                                {entry.problem !== 'MALFORMED' && ` · ${EMAIL_PROBLEM[entry.problem]}`}
+                              </li>
+                            ))}
+                          </ul>
+                          {emailList.invalid.length > 8 && (
+                            <span>và {emailList.invalid.length - 8} mục khác.</span>
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                </Field>
+              ) : (
+                <Field
+                  id="campaign-ids"
+                  label="Danh sách id"
+                  badge={
+                    <Badge variant={ids.length > 0 ? 'info' : 'muted'} size="sm">
+                      {ids.length} id
+                    </Badge>
+                  }
+                  hint={
+                    mode === 'workspace'
+                      ? `Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Nhận id mờ (bắt đầu bằng ${ID_TAG.workspace}, dài ${ID_LENGTH} ký tự) hoặc id số thô dán từ truy vấn SQL, nhưng cả danh sách phải cùng một dạng.`
+                      : `Mỗi dòng một id, dán từ bảng tính cũng được. Id trùng nhau chỉ tính một lần. Id bắt đầu bằng ${ID_TAG.account} và dài ${ID_LENGTH} ký tự.`
+                  }
+                >
+                  <div className="flex flex-col gap-2">
+                    <Textarea
+                      id="campaign-ids"
+                      rows={5}
+                      value={rawIds[mode]}
+                      onChange={(e) => setRawIds((prev) => ({ ...prev, [mode]: e.target.value }))}
+                      placeholder={
+                        mode === 'workspace'
+                          ? 'wk8AA109MXP1XRBY\nwkNN0TC1ZMG8NMMP\n\nhoặc id số: 128\n129'
+                          : 'ac8AA109MXP1XRBY\nacNN0TC1ZMG8NMMP'
+                      }
+                      error={malformed.length > 0 || mixedIdForms}
+                      className="font-mono"
+                    />
+                    {mixedIdForms && (
+                      <Alert variant="warning">
+                        <AlertDescription>
+                          Danh sách đang trộn {numericIds.length} id số và {opaqueIds.length} id mờ.
+                          Backend chỉ nhận một dạng cho mỗi lần gửi: nếu có id số thì id mờ bị bỏ qua
+                          hoàn toàn. Giữ lại một dạng rồi chạy thử lại.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {useRawIds && (
+                      <Alert variant="info">
+                        <AlertDescription>
+                          Đang gửi theo {numericIds.length} id số thô. Id số không đọc được bằng mắt
+                          nên hãy chạy thử và đối chiếu số người nhận trước khi gửi thật.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {malformed.length > 0 && (
+                      <Alert variant="warning">
+                        <AlertDescription className="flex flex-col gap-1">
+                          <span>
+                            {malformed.length} id không đúng dạng, sửa hoặc bỏ khỏi danh sách rồi mới chạy
+                            thử được:
+                          </span>
+                          <ul className="flex flex-col gap-0.5">
+                            {malformed.slice(0, 8).map((id) => (
+                              <li key={id}>
+                                <code className="font-mono text-xs break-all">{id}</code>
+                              </li>
+                            ))}
+                          </ul>
+                          {malformed.length > 8 && <span>và {malformed.length - 8} id khác.</span>}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                </Field>
+              )}
 
-              <Text variant="caption" muted>
-                Một tài khoản đứng tên nhiều workspace chỉ nhận một mail.
-              </Text>
+              {!isEmail && (
+                <Text variant="caption" muted>
+                  Một tài khoản đứng tên nhiều workspace chỉ nhận một mail.
+                </Text>
+              )}
             </>
           )}
 
@@ -570,7 +719,7 @@ export function CreateCampaignDialog({
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" onClick={runDryRun} disabled={busy}>
-                  {dryRun.isPending ? <Spinner size="sm" /> : <FlaskConical className="size-4" />}
+                  {dryRunning ? <Spinner size="sm" /> : <FlaskConical className="size-4" />}
                   {ready ? 'Chạy thử lại' : 'Chạy thử (không ghi)'}
                 </Button>
                 {stale && (
@@ -582,7 +731,9 @@ export function CreateCampaignDialog({
 
               {ready && (
                 <div className="flex flex-col gap-2">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {/* Danh sách email: một mục sai làm hỏng cả request chứ không bị bỏ qua, nên số
+                      "không có email", khối id bị bỏ và số dùng thử luôn là 0 hoặc rỗng, ẩn đi. */}
+                  <div className={cn('grid grid-cols-1 gap-2', isEmail ? 'sm:grid-cols-2' : 'sm:grid-cols-3')}>
                     <StatCard
                       label="Sẽ gửi"
                       value={ready.queued}
@@ -597,13 +748,15 @@ export function CreateCampaignDialog({
                       intent="warning"
                       emphasizeValue
                     />
-                    <StatCard
-                      label="Bỏ qua vì không có email"
-                      value={ready.skippedNoEmail}
-                      icon={<MailX />}
-                      intent="info"
-                      emphasizeValue
-                    />
+                    {!isEmail && (
+                      <StatCard
+                        label="Bỏ qua vì không có email"
+                        value={ready.skippedNoEmail}
+                        icon={<MailX />}
+                        intent="info"
+                        emphasizeValue
+                      />
+                    )}
                   </div>
                   <Text variant="caption" muted>
                     Template {ready.templateCode} v{ready.templateVersion} sẽ được ghim cho đợt gửi này.
@@ -618,7 +771,7 @@ export function CreateCampaignDialog({
                     </Alert>
                   )}
 
-                  {ready.trialsGranted > 0 && (
+                  {!isEmail && ready.trialsGranted > 0 && (
                     <Alert variant="info">
                       <AlertDescription>
                         Template này kích hoạt dùng thử: {ready.trialsGranted} workspace chưa có gói
@@ -628,7 +781,7 @@ export function CreateCampaignDialog({
                     </Alert>
                   )}
 
-                  <SkippedBreakdown skipped={ready.skipped} />
+                  {!isEmail && <SkippedBreakdown skipped={ready.skipped} />}
 
                   {ready.ignoredVariables.length > 0 && (
                     <Alert variant="warning">
@@ -652,7 +805,7 @@ export function CreateCampaignDialog({
                     Xếp hàng gửi {ready.queued} mail bằng template {templateName}
                     {version ? ` v${version}` : ''}. Mail đã gửi không thể rút lại; bạn chỉ có thể hủy phần
                     chưa gửi.
-                    {ready.trialsGranted > 0
+                    {!isEmail && ready.trialsGranted > 0
                       ? ` Kèm theo đó, ${ready.trialsGranted} workspace được cấp gói dùng thử, và việc này xảy ra kể cả khi mail sau đó gửi hỏng.`
                       : ''}
                   </AlertDescription>
@@ -699,7 +852,7 @@ export function CreateCampaignDialog({
               >
                 <span className="inline-flex">
                   <Button onClick={submit} disabled={busy || !ready}>
-                    {create.isPending ? <Spinner size="sm" /> : <Send className="size-4" />}
+                    {sending ? <Spinner size="sm" /> : <Send className="size-4" />}
                     {ready ? `Xếp hàng gửi ${ready.queued} mail` : 'Xếp hàng gửi'}
                   </Button>
                 </span>

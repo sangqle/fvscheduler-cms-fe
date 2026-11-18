@@ -83,8 +83,9 @@ docs/specs/                                   # spec ngắn mỗi module: màn h
   quyền theo role (chỉ allowlist).
 - Mọi id là id mờ (`wk…`, `mb…`, `ac…`); dòng subscription không có id; đơn hàng theo `orderCode`.
 - Mail: template lưu ở DB với version bất biến (mỗi lần lưu là version mới, 409 khi hai người cùng
-  lưu); xem trước chỉ render bản đã lưu; chiến dịch ghim version lúc tạo và gửi tới chủ workspace
-  hoặc tài khoản; message không có id; 422 trả danh sách lỗi trong `data`. Chi tiết ở
+  lưu); xem trước chỉ render bản đã lưu; chiến dịch ghim version lúc tạo và gửi tới chủ workspace,
+  tài khoản, hoặc một danh sách email của người chưa là thành viên (endpoint riêng, không có link
+  hủy đăng ký); message không có id; 422 trả danh sách lỗi trong `data`. Chi tiết ở
   `docs/specs/mail.md`.
 - Mã giảm giá: giảm theo %, khóa bằng `code` (không có id mờ), `state` suy theo đồng hồ và luôn đọc
   từ response. `PUT` thay mọi trường (bật/tắt cũng là PUT), xóa chỉ khi sổ lượt dùng rỗng, ngày hiện

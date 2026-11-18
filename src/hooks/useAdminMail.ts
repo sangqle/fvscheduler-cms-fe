@@ -18,6 +18,7 @@ import type {
   CampaignActionResult,
   CreateCampaignInput,
   CreateCampaignResult,
+  CreateEmailCampaignInput,
   MailContextInput,
   MailPreviewResult,
   MailTemplateInput,
@@ -210,19 +211,44 @@ export function useMailCampaign(campaignCode: string) {
   });
 }
 
+/** Chiến dịch vừa tạo hiện ở danh sách chiến dịch và nhật ký gửi; lần chạy thử không ghi gì nên bỏ qua. */
+function useInvalidateCreatedCampaign() {
+  const qc = useQueryClient();
+  return (result: CreateCampaignResult) => {
+    if (result.dryRun) return;
+    void qc.invalidateQueries({ queryKey: ['admin', 'mail', 'campaigns'] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'mail', 'messages'] });
+  };
+}
+
 /** POST /api/admin/mail/campaigns: `dryRun` chỉ đếm người nhận, không chèn dòng nào. */
 export function useCreateMailCampaign() {
   const { headers } = useAuthHeaders();
-  const qc = useQueryClient();
+  const invalidate = useInvalidateCreatedCampaign();
   return useMutation({
     mutationKey: ['admin', 'mail', 'campaign', 'create'],
     mutationFn: (input: CreateCampaignInput) =>
       apiFetch<CreateCampaignResult>('/api/admin/mail/campaigns', { method: 'POST', body: input, headers }),
-    onSuccess: (result) => {
-      if (result.dryRun) return;
-      void qc.invalidateQueries({ queryKey: ['admin', 'mail', 'campaigns'] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'mail', 'messages'] });
-    },
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * POST /api/admin/mail/campaigns/by-email: chiến dịch gửi thẳng tới một danh sách địa chỉ, cho người
+ * chưa là thành viên. Cùng response với `useCreateMailCampaign`; `dryRun` chỉ đếm, không chèn dòng nào.
+ */
+export function useCreateEmailCampaign() {
+  const { headers } = useAuthHeaders();
+  const invalidate = useInvalidateCreatedCampaign();
+  return useMutation({
+    mutationKey: ['admin', 'mail', 'campaign', 'create-by-email'],
+    mutationFn: (input: CreateEmailCampaignInput) =>
+      apiFetch<CreateCampaignResult>('/api/admin/mail/campaigns/by-email', {
+        method: 'POST',
+        body: input,
+        headers,
+      }),
+    onSuccess: invalidate,
   });
 }
 

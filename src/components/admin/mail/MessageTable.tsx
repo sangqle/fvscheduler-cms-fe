@@ -135,7 +135,8 @@ export function MessageTable({
       header: 'Workspace',
       cell: (m) => {
         const wsId = m.workspaceId;
-        // Chiến dịch gửi theo accountIds không gắn workspace nào, đây là null thật chứ không phải thiếu dữ liệu.
+        // Chiến dịch gửi theo accountIds hoặc theo danh sách email không gắn workspace nào, đây là
+        // null thật chứ không phải thiếu dữ liệu.
         if (!wsId) return <span className="text-xs text-muted-foreground">—</span>;
         return (
           <span className="flex items-center gap-1">
