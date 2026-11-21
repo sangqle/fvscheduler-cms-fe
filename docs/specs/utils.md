@@ -1,25 +1,28 @@
 # Tiện ích: hộp công cụ vận hành
 
-Updated: 2026-09-08 · Thiết kế: chưa có mockup (dựng theo `Card` + `DataTable` sẵn có) ·
+Updated: 2026-11-21 · Thiết kế: chưa có mockup (dựng theo `Card` + `DataTable` sẵn có) ·
 Backend: `../fvscheduler/docs/features/admin/technical/fe-integration.md` (ADM-FLOW-03)
 
 ## Mục đích
 
-Chỗ cho những thao tác tra cứu một lần của người trực hỗ trợ: không thuộc màn nghiệp vụ nào, không
-ghi gì vào hệ thống, không có bộ lọc hay phân trang để nhớ. Hiện có **một** công cụ, giải mã id mờ
-thành khóa số của DB nền tảng, để trả lời câu "khách gửi cái `wk…` này, chạy SQL nào bây giờ".
+Chỗ cho những thao tác vận hành không thuộc màn nghiệp vụ nào. Hai tab: **Giải mã id** (tra cứu một
+lần của người trực hỗ trợ: giải mã id mờ thành khóa số của DB nền tảng, để trả lời câu "khách gửi cái
+`wk…` này, chạy SQL nào bây giờ") và **Khung ảnh** (tiện ích dựng ảnh đăng mạng xã hội, chạy trong
+trình duyệt, xem [utils-frame.md](./utils-frame.md)). Không tab nào ghi gì vào hệ thống.
 
-**Không có**: tra ngược khóa số thành id mờ (backend không mở chiều đó), kiểm tra bản ghi có tồn
+**Không có (tab Giải mã id)**: tra ngược khóa số thành id mờ (backend không mở chiều đó), kiểm tra bản ghi có tồn
 tại không, tên bảng SQL đi kèm mỗi loại, lịch sử các lần đã giải mã.
 
 ## Màn hình
 
 ### `/utils`
-- Thành phần: `components/admin/utils/UtilsScreen.tsx` (server component, chỉ `PageHeader` + cột
-  thẻ) → `DecodeIdsCard.tsx`. Thêm công cụ mới = thêm một `Card` vào cột đó.
-- Filter/URL: **không có, và cố tình không có**. Id mờ chỉ đi trong body request, không bao giờ lên
-  URL (xem "Rule FE phải giữ"). Vì không đọc `useSearchParams`, `page.tsx` không cần bọc `Suspense`
-  như các route khác.
+- Thành phần: `components/admin/utils/UtilsScreen.tsx` (client, `PageHeader` + `Tabs`; mô tả
+  `PageHeader` đổi theo tab) → `DecodeIdsCard.tsx` hoặc `frame/FrameTool.tsx`. Chỉ tab đang chọn mới
+  mount nội dung. Nhãn và danh sách tab ở `utilsTabs.ts`.
+- Filter/URL: chỉ `?tab=decode|frame`; `decode` là mặc định nên bị bỏ khỏi URL khi chọn. Giá trị lạ
+  rơi về `decode`. Id mờ **không bao giờ** lên URL (xem "Rule FE phải giữ"). `page.tsx` bọc
+  `Suspense` (fallback `loading.tsx`) vì màn đọc `useSearchParams` qua `useUrlState`.
+- Các mục Trạng thái và "Thử lại" dưới đây là của tab Giải mã id; tab Khung ảnh ở `utils-frame.md`.
 - Trạng thái: chưa chạy (chỉ có ô nhập) · pending (nút `Spinner` + disabled, bảng ở chế độ
   `isLoading`) · lỗi tải (`ErrorState` thay **cả** khối kết quả, kể cả dòng tổng kết: hỏng thì
   không có số nào để tổng kết, mà "0 id · 0 ra khóa số" đứng trên hộp lỗi đọc như kết luận của

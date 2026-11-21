@@ -33,7 +33,7 @@ src/app/(admin)/coupons, [code]               # mã giảm giá (?status=&q=; ch
 src/app/(admin)/mail, templates/[code], campaigns/[campaignCode]  # CMS-10..14 (?tab=templates|campaigns|messages)
 src/app/(admin)/affiliate                     # chưa có mã CMS (?tab=payouts|commissions|rates)
 src/app/(admin)/client-albums                 # album khách, chỉ đọc (?tab=monthly|storage; spec docs/specs/client-albums.md)
-src/app/(admin)/utils                         # tiện ích vận hành (giải mã id mờ → rawId)
+src/app/(admin)/utils                         # tiện ích vận hành (?tab=decode|frame: giải mã id mờ → rawId; khung ảnh MXH)
 src/app/forbidden                             # 403 allowlist
 src/components/ui/                            # primitives (KHÔNG style tại feature)
 src/components/admin/{layout,shared,workspaces,orders,plans,coupons,mail,affiliate,client-albums,utils}/
@@ -41,6 +41,7 @@ src/hooks/useAdmin*.ts                        # TanStack hooks, query key ở đ
 src/hooks/useUrlState.ts                      # filter/phân trang sống trên URL
 src/lib/api/http.ts                           # apiFetch duy nhất (envelope, ApiError, 401/429 events)
 src/lib/auth.ts                               # NextAuth
+src/lib/frame/                                # bộ vẽ khung ảnh mạng xã hội (canvas, chỉ chạy ở trình duyệt)
 src/lib/admin/labels.ts                       # enum → nhãn + Badge variant (một chỗ duy nhất)
 src/types/admin.ts                            # DTO của /api/admin/** (không duplicate ở nơi khác)
 docs/specs/                                   # spec ngắn mỗi module: màn hình + endpoint + rule

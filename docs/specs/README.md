@@ -12,7 +12,8 @@ Một file cho mỗi module CMS. Đọc trước khi sửa, cập nhật sau khi
 | Tiếp thị liên kết: yêu cầu rút, hoa hồng, tỷ lệ | [affiliate.md](./affiliate.md) | chưa có mockup |
 | Email hệ thống | [mail.md](./mail.md) | CMS-10..14 |
 | Album khách: thống kê theo tháng, dung lượng (chỉ đọc), cùng ô và tab trong workspace | [client-albums.md](./client-albums.md) | chưa có mockup |
-| Tiện ích (giải mã id mờ) | [utils.md](./utils.md) | chưa có mockup |
+| Tiện ích: trang hai tab (`?tab=decode\|frame`), giải mã id mờ | [utils.md](./utils.md) | chưa có mockup |
+| Tiện ích › Khung ảnh mạng xã hội | [utils-frame.md](./utils-frame.md) | chưa có mockup |
 
 ## Khung xương lúc tải (dùng chung)
 
